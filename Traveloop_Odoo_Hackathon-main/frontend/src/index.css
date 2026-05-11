@@ -1,0 +1,756 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────
+   DESIGN SYSTEM — VOYAGE INTELLIGENCE
+   Typography: Plus Jakarta Sans (headings) + Inter (body)
+   ───────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    /* Primary Palette */
+    --primary: #001b26;
+    --primary-container: #0d313f;
+    --on-primary: #ffffff;
+    --on-primary-container: #7999aa;
+
+    /* Secondary / CTA (Coral) */
+    --secondary: #ae311e;
+    --secondary-container: #E8604C;
+    --on-secondary: #ffffff;
+
+    /* Tertiary (Teal) */
+    --tertiary: #003333;
+    --tertiary-container: #18a5a5;
+
+    /* Surfaces */
+    --surface: #F8FAFC;
+    --surface-container: #FFFFFF;
+    --surface-container-low: #f1f5f9;
+    --surface-dim: #e2e8f0;
+
+    /* Text */
+    --on-surface: #0b1c30;
+    --on-surface-variant: #64748B;
+    --outline: #94a3b8;
+    --outline-variant: #e2e8f0;
+
+    /* Semantic */
+    --success: #059669;
+    --success-bg: #ecfdf5;
+    --warning: #d97706;
+    --warning-bg: #fffbeb;
+    --error: #dc2626;
+    --error-bg: #fef2f2;
+
+    /* Elevation */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04);
+    --shadow-xl: 0 24px 48px rgba(0,0,0,0.12), 0 8px 16px rgba(0,0,0,0.06);
+
+    /* Shape */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --radius-full: 9999px;
+
+    /* ── Typography Tokens ── */
+    --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-body:    'Inter', system-ui, sans-serif;
+
+    /* Scale */
+    --text-hero:    clamp(2rem, 5vw, 3rem);
+    --text-h1:      clamp(1.75rem, 4vw, 2.5rem);
+    --text-h2:      clamp(1.375rem, 3vw, 2rem);
+    --text-h3:      clamp(1.125rem, 2.5vw, 1.5rem);
+    --text-h4:      clamp(1rem, 2vw, 1.25rem);
+    --text-body-lg: 1.125rem;
+    --text-body:    1rem;
+    --text-sm:      0.875rem;
+    --text-xs:      0.75rem;
+
+    /* Line heights */
+    --lh-tight:   1.15;
+    --lh-snug:    1.25;
+    --lh-normal:  1.5;
+    --lh-relaxed: 1.625;
+    --lh-loose:   1.75;
+
+    /* Letter spacing */
+    --ls-tighter: -0.03em;
+    --ls-tight:   -0.02em;
+    --ls-snug:    -0.015em;
+    --ls-normal:   0;
+    --ls-wide:     0.025em;
+    --ls-wider:    0.05em;
+    --ls-widest:   0.1em;
+  }
+
+  /* ── Reset & Base ── */
+  *, *::before, *::after {
+    border-color: var(--outline-variant);
+    box-sizing: border-box;
+  }
+
+  html {
+    text-rendering: optimizeLegibility;
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: var(--lh-relaxed);
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--surface);
+    color: var(--on-surface);
+    letter-spacing: -0.005em;
+  }
+
+  /* ── Heading Hierarchy ── */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    color: var(--on-surface);
+    font-weight: 700;
+    line-height: var(--lh-snug);
+    letter-spacing: var(--ls-tight);
+  }
+
+  h1 { font-size: var(--text-h1); font-weight: 800; letter-spacing: var(--ls-tighter); }
+  h2 { font-size: var(--text-h2); font-weight: 700; letter-spacing: var(--ls-tight); }
+  h3 { font-size: var(--text-h3); font-weight: 700; letter-spacing: var(--ls-snug); }
+  h4 { font-size: var(--text-h4); font-weight: 600; letter-spacing: -0.01em; }
+  h5 { font-size: var(--text-sm); font-weight: 600; letter-spacing: -0.005em; }
+  h6 { font-size: var(--text-xs); font-weight: 600; letter-spacing: var(--ls-wide); text-transform: uppercase; }
+
+  /* ── Paragraph & Prose ── */
+  p {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: var(--lh-relaxed);
+    color: var(--on-surface-variant);
+    margin: 0;
+  }
+
+  /* ── Form Elements ── */
+  input, textarea, select, button {
+    font-family: var(--font-body);
+  }
+
+  button {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  label {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: var(--ls-wide);
+    color: var(--on-surface-variant);
+  }
+
+  /* ── Selection ── */
+  ::selection {
+    background: rgba(232, 96, 76, 0.18);
+    color: var(--on-surface);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   COMPONENT LIBRARY
+   ───────────────────────────────────────────── */
+
+@layer components {
+
+  /* ── Typography Utilities ── */
+  .font-heading { font-family: var(--font-heading); }
+  .font-body    { font-family: var(--font-body); }
+
+  .text-hero {
+    font-family: var(--font-heading);
+    font-size: var(--text-hero);
+    font-weight: 800;
+    line-height: var(--lh-tight);
+    letter-spacing: var(--ls-tighter);
+    color: var(--on-surface);
+  }
+  .text-display {
+    font-family: var(--font-heading);
+    font-size: var(--text-h1);
+    font-weight: 800;
+    line-height: 1.18;
+    letter-spacing: var(--ls-tighter);
+    color: var(--on-surface);
+  }
+  .text-heading-2 {
+    font-family: var(--font-heading);
+    font-size: var(--text-h2);
+    font-weight: 700;
+    line-height: var(--lh-snug);
+    letter-spacing: var(--ls-tight);
+    color: var(--on-surface);
+  }
+  .text-heading-3 {
+    font-family: var(--font-heading);
+    font-size: var(--text-h3);
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: var(--ls-snug);
+    color: var(--on-surface);
+  }
+  .text-heading-4 {
+    font-family: var(--font-heading);
+    font-size: var(--text-h4);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    color: var(--on-surface);
+  }
+  .text-label-lg {
+    font-family: var(--font-heading);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    color: var(--on-surface);
+  }
+  .text-label {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: var(--ls-wide);
+    color: var(--on-surface-variant);
+  }
+  .text-overline {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: var(--ls-widest);
+    text-transform: uppercase;
+    color: var(--outline);
+  }
+  .text-body-lg {
+    font-family: var(--font-body);
+    font-size: var(--text-body-lg);
+    line-height: var(--lh-loose);
+    color: var(--on-surface-variant);
+  }
+  .text-body {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: var(--lh-relaxed);
+    color: var(--on-surface-variant);
+  }
+  .text-caption {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    line-height: var(--lh-normal);
+    color: var(--outline);
+  }
+  .text-meta {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: var(--ls-wide);
+    color: var(--outline);
+    text-transform: uppercase;
+  }
+
+  /* ── Page Header Pattern ── */
+  .page-header-label {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: var(--ls-widest);
+    text-transform: uppercase;
+    color: var(--outline);
+    margin-bottom: 0.25rem;
+  }
+  .page-header-title {
+    font-family: var(--font-heading);
+    font-size: var(--text-h1);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: var(--ls-tighter);
+    color: var(--on-surface);
+  }
+  .page-header-subtitle {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    line-height: var(--lh-relaxed);
+    color: var(--on-surface-variant);
+    margin-top: 0.375rem;
+  }
+
+  /* ── Metric/Stat Display ── */
+  .stat-value {
+    font-family: var(--font-heading);
+    font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: var(--ls-tighter);
+    color: var(--on-surface);
+  }
+  .stat-label {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: var(--ls-wider);
+    text-transform: uppercase;
+    color: var(--outline);
+  }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    font-family: var(--font-heading);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    background: var(--secondary-container);
+    color: var(--on-secondary);
+    padding: 11px 24px;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: var(--shadow-sm);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .btn-primary:hover {
+    background: var(--secondary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn-secondary {
+    font-family: var(--font-heading);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    background: transparent;
+    color: var(--on-surface);
+    padding: 11px 24px;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 1.5px solid var(--outline-variant);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1;
+  }
+  .btn-secondary:hover {
+    background: var(--surface-container-low);
+    border-color: var(--outline);
+  }
+
+  .btn-ghost {
+    font-family: var(--font-heading);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    background: transparent;
+    color: var(--on-surface-variant);
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1;
+  }
+  .btn-ghost:hover {
+    background: var(--surface-container-low);
+    color: var(--on-surface);
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface-container);
+    border: 1px solid var(--outline-variant);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-md);
+  }
+  .card-interactive {
+    background: var(--surface-container);
+    border: 1px solid var(--outline-variant);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .card-interactive:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    border-color: transparent;
+  }
+
+  /* ── Input Fields ── */
+  .input-field {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 400;
+    width: 100%;
+    padding: 11px 16px;
+    background: white;
+    color: var(--on-surface);
+    border: 1.5px solid var(--outline-variant);
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    outline: none;
+    line-height: 1.5;
+  }
+  .input-field::placeholder {
+    color: var(--outline);
+    font-weight: 400;
+  }
+  .input-field:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 27, 38, 0.08);
+  }
+  .input-field:disabled {
+    background: var(--surface-container-low);
+    color: var(--on-surface-variant);
+    cursor: not-allowed;
+  }
+
+  .input-field-dark {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    @apply w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#E8604C] focus:border-transparent transition-all;
+  }
+
+  /* ── Input Label Pattern ── */
+  .input-label {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--on-surface-variant);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  /* ── Badges ── */
+  .badge {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5;
+    border-radius: var(--radius-full);
+    line-height: 1.6;
+  }
+  .badge-success  { background: var(--success-bg); color: var(--success); }
+  .badge-warning  { background: var(--warning-bg); color: var(--warning); }
+  .badge-error    { background: var(--error-bg);   color: var(--error); }
+  .badge-primary  { background: rgba(0,27,38,0.08); color: var(--primary); }
+  .badge-coral    { background: rgba(232,96,76,0.12); color: var(--secondary); }
+
+  /* ── Navigation Item ── */
+  .nav-item {
+    font-family: var(--font-heading);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: var(--radius-md);
+    transition: all 0.18s ease;
+    color: var(--on-surface-variant);
+    text-decoration: none;
+    line-height: 1;
+  }
+  .nav-item:hover {
+    background: var(--surface-container-low);
+    color: var(--on-surface);
+  }
+  .nav-item.active {
+    background: rgba(232,96,76,0.09);
+    color: #ae311e;
+  }
+  .nav-item.active svg {
+    color: #E8604C;
+  }
+
+  /* ── Section Labels ── */
+  .section-label {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: var(--ls-widest);
+    text-transform: uppercase;
+    color: var(--outline);
+    padding: 0 12px;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  /* ── Table Typography ── */
+  .table-header {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: var(--ls-wider);
+    text-transform: uppercase;
+    color: var(--outline);
+  }
+  .table-cell {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 400;
+    color: var(--on-surface);
+    line-height: var(--lh-normal);
+  }
+  .table-cell-meta {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    color: var(--on-surface-variant);
+  }
+
+  /* ── Section Spacing ── */
+  .section-padding {
+    @apply px-6 sm:px-8 lg:px-16 xl:px-24;
+  }
+
+  /* ── Page Animation ── */
+  .page-transition {
+    animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   ANIMATIONS
+   ───────────────────────────────────────────── */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ─────────────────────────────────────────────
+   SCROLLBAR
+   ───────────────────────────────────────────── */
+
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.hide-scrollbar { scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ─────────────────────────────────────────────
+   PHONE INPUT OVERRIDES
+   ───────────────────────────────────────────── */
+
+.PhoneInput {
+  @apply flex w-full relative shadow-sm rounded-xl items-center;
+}
+.PhoneInputCountry {
+  @apply pl-4 pr-3 py-3 rounded-l-xl border border-gray-200 border-r-0 bg-gray-50 flex items-center justify-center flex-shrink-0 cursor-pointer transition-colors hover:bg-gray-100;
+}
+.PhoneInputCountryIcon {
+  @apply w-[1.5em] h-[1em] shadow-sm overflow-hidden;
+}
+.PhoneInputCountryIcon--border {
+  @apply border-0 rounded-sm shadow-[0_0_0_1px_rgba(0,0,0,0.1)];
+}
+.PhoneInputInput {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  @apply w-full pl-3 pr-4 py-3 rounded-r-xl border border-gray-200 border-l-gray-200 focus:ring-2 focus:ring-[#001b26] focus:border-transparent outline-none bg-white text-gray-900 transition-all min-h-[46px];
+}
+.PhoneInput--error .PhoneInputInput  { @apply border-red-500; }
+.PhoneInput--error .PhoneInputCountry { @apply border-red-500; }
+.PhoneInputCountrySelectArrow {
+  @apply ml-2 w-2 h-2 border-r-2 border-b-2 border-gray-500 rotate-45 transform origin-center transition-transform opacity-70;
+}
+.PhoneInputCountrySelect:focus + .PhoneInputCountrySelectArrow {
+  @apply opacity-100 border-[#001b26];
+}
+
+/* ─────────────────────────────────────────────
+   REACT-SELECT OVERRIDES
+   ───────────────────────────────────────────── */
+
+.react-select__control {
+  font-family: var(--font-body) !important;
+  font-size: var(--text-sm) !important;
+  border-color: var(--outline-variant) !important;
+  border-width: 1.5px !important;
+  border-radius: var(--radius-md) !important;
+  min-height: 44px !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+.react-select__control--is-focused {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(0,27,38,0.08) !important;
+}
+.react-select__menu {
+  font-family: var(--font-body) !important;
+  font-size: var(--text-sm) !important;
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--outline-variant) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+.react-select__option--is-selected {
+  background-color: var(--primary) !important;
+}
+.react-select__option--is-focused {
+  background-color: var(--surface-container-low) !important;
+  color: var(--on-surface) !important;
+}
+.react-select__placeholder {
+  color: var(--outline) !important;
+  font-weight: 400 !important;
+}
+
+/* ─────────────────────────────────────────────
+   PROSE / RICH TEXT EDITOR
+   ───────────────────────────────────────────── */
+
+.prose-editor {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--lh-loose);
+  color: var(--on-surface-variant);
+}
+.prose-editor:empty:before {
+  content: attr(data-placeholder);
+  color: var(--outline);
+  pointer-events: none;
+}
+.prose-editor:focus { outline: none; }
+.prose-editor h1 {
+  font-family: var(--font-heading);
+  font-size: var(--text-h2);
+  font-weight: 800;
+  color: var(--on-surface);
+  margin: 1rem 0 0.5rem;
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-tighter);
+}
+.prose-editor h2 {
+  font-family: var(--font-heading);
+  font-size: var(--text-h3);
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0.875rem 0 0.5rem;
+  line-height: 1.3;
+  letter-spacing: var(--ls-snug);
+}
+.prose-editor p  { margin: 0.5rem 0; line-height: var(--lh-loose); color: #334155; }
+.prose-editor b, .prose-editor strong { font-weight: 700; color: var(--on-surface); }
+.prose-editor i, .prose-editor em    { font-style: italic; color: #334155; }
+.prose-editor u  { text-decoration: underline; text-decoration-color: #E8604C; text-underline-offset: 3px; }
+.prose-editor s  { text-decoration: line-through; color: var(--outline); }
+.prose-editor ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; color: #334155; }
+.prose-editor ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; color: #334155; }
+.prose-editor li { margin: 0.25rem 0; line-height: var(--lh-loose); }
+.prose-editor blockquote {
+  border-left: 3px solid #E8604C;
+  padding: 0.5rem 1rem;
+  margin: 0.75rem 0;
+  background: rgba(232,96,76,0.04);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--on-surface-variant);
+  font-style: italic;
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE TYPOGRAPHY OVERRIDES
+   ───────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .stat-value { font-size: clamp(1.5rem, 8vw, 2rem); }
+  .page-header-title { font-size: clamp(1.5rem, 7vw, 2rem); }
+}
+
+/* ─────────────────────────────────────────────
+   INVOICE / FINANCIAL TABLE TYPOGRAPHY
+   ───────────────────────────────────────────── */
+
+.invoice-table th {
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  color: var(--outline);
+  padding: 10px 16px;
+}
+.invoice-table td {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--on-surface);
+  line-height: var(--lh-normal);
+  padding: 12px 16px;
+}
+.invoice-total-label {
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--on-surface);
+  letter-spacing: -0.005em;
+}
+.invoice-total-value {
+  font-family: var(--font-heading);
+  font-size: var(--text-h3);
+  font-weight: 800;
+  color: var(--on-surface);
+  letter-spacing: var(--ls-tighter);
+}
+
+/* ─────────────────────────────────────────────
+   MOBILE BOTTOM NAV TYPOGRAPHY
+   ───────────────────────────────────────────── */
+
+.mobile-nav-label {
+  font-family: var(--font-heading);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+@media print { .hide-print { display: none !important; } .sidebar { display: none !important; } main { margin-left: 0 !important; padding: 0 !important; } }
