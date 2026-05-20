@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: traveloop-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: traveloop_secret
+      POSTGRES_DB: traveloop
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: traveloop-backend
+    # .env.docker supplies DATABASE_URL (db:5432), JWT_SECRET, PORT, NODE_ENV, BCRYPT_SALT_ROUNDS
+    env_file:
+      - ./infrastructure/docker/.env.docker
+    # CORS_ORIGIN must be the HOST browser address — NOT the container name.
+    # The browser is on the host machine and reaches the API via localhost:3000.
+    environment:
+      CORS_ORIGIN: http://localhost:5173
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+      args:
+        # VITE_API_BASE_URL is baked into the JS bundle at BUILD TIME by Vite.
+        # It must be the HOST-facing URL (localhost:3000), not the Docker
+        # internal network address (backend:3000), because the browser
+        # — running on the host — is what makes the actual HTTP calls.
+        VITE_API_BASE_URL: http://localhost:3000/api/v1
+    container_name: traveloop-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres_data:
+

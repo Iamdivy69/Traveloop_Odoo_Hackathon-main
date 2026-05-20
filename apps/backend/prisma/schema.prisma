@@ -1,0 +1,173 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────────────────────
+// 3.1 Users
+// ──────────────────────────────────────────────────────────────
+model User {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  first_name         String   @db.VarChar(100)
+  last_name          String   @db.VarChar(100)
+  email              String   @unique @db.VarChar(255)
+  phone              String?  @db.VarChar(20)
+  city               String?  @db.VarChar(100)
+  country            String?  @db.VarChar(100)
+  password_hash      String   @db.Text
+  photo_url          String?  @db.Text
+  language           String   @default("en") @db.VarChar(10)
+  is_admin           Boolean  @default(false)
+  saved_destinations String[] @default([])
+  created_at         DateTime @default(now()) @db.Timestamptz()
+  updated_at         DateTime @default(now()) @updatedAt @db.Timestamptz()
+
+  trips Trip[]
+
+  @@map("users")
+}
+
+// ──────────────────────────────────────────────────────────────
+// 3.2 Trips
+// ──────────────────────────────────────────────────────────────
+model Trip {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String   @db.Uuid
+  name            String   @db.VarChar(150)
+  description     String?  @db.Text
+  start_date      DateTime @db.Timestamptz()
+  end_date        DateTime @db.Timestamptz()
+  cover_photo_url String?  @db.Text
+  is_public       Boolean  @default(false)
+  share_token     String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  total_budget    Decimal? @db.Decimal(12, 2)
+  created_at      DateTime @default(now()) @db.Timestamptz()
+  updated_at      DateTime @default(now()) @updatedAt @db.Timestamptz()
+
+  user          User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  stops         TripStop[]
+  packing_items PackingItem[]
+  notes         TripNote[]
+
+  @@index([user_id, created_at])
+  @@map("trips")
+}
+
+// ──────────────────────────────────────────────────────────────
+// 3.3 Cities (seeded reference data)
+// ──────────────────────────────────────────────────────────────
+model City {
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String  @db.VarChar(100)
+  country          String  @db.VarChar(100)
+  region           String? @db.VarChar(100)
+  cost_index       Decimal @db.Decimal(8, 2)
+  popularity_score Int     @default(0)
+  description      String? @db.Text
+  image_url        String? @db.Text
+
+  activities Activity[]
+  stops      TripStop[]
+
+  @@unique([name, country])
+  @@index([name])
+  @@map("cities")
+}
+
+// ──────────────────────────────────────────────────────────────
+// 3.4 Trip Stops
+// ──────────────────────────────────────────────────────────────
+model TripStop {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trip_id        String   @db.Uuid
+  city_id        String   @db.Uuid
+  arrival_date   DateTime @db.Timestamptz()
+  departure_date DateTime @db.Timestamptz()
+  order_index    Int
+
+  trip       Trip           @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  city       City           @relation(fields: [city_id], references: [id], onDelete: Restrict)
+  activities StopActivity[]
+  notes      TripNote[]
+
+  @@index([trip_id, order_index])
+  @@map("trip_stops")
+}
+
+// ──────────────────────────────────────────────────────────────
+// 3.5 Activities (seeded reference data)
+// ──────────────────────────────────────────────────────────────
+model Activity {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  city_id       String  @db.Uuid
+  name          String  @db.VarChar(150)
+  type          String  @db.VarChar(50)
+  cost          Decimal @default(0) @db.Decimal(8, 2)
+  duration_mins Int?
+  description   String? @db.Text
+  image_url     String? @db.Text
+
+  city            City           @relation(fields: [city_id], references: [id], onDelete: Restrict)
+  stop_activities StopActivity[]
+
+  @@unique([city_id, name])
+  @@map("activities")
+}
+
+// ──────────────────────────────────────────────────────────────
+// 3.6 Stop Activities (junction)
+// ──────────────────────────────────────────────────────────────
+model StopActivity {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stop_id        String   @db.Uuid
+  activity_id    String   @db.Uuid
+  scheduled_time String?  @db.VarChar(10)
+  custom_cost    Decimal? @db.Decimal(8, 2)
+  notes          String?  @db.Text
+
+  stop     TripStop @relation(fields: [stop_id], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activity_id], references: [id], onDelete: Restrict)
+
+  @@map("stop_activities")
+}
+
+// ──────────────────────────────────────────────────────────────
+// 3.7 Packing Items
+// ──────────────────────────────────────────────────────────────
+model PackingItem {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trip_id    String   @db.Uuid
+  name       String   @db.VarChar(150)
+  category   String   @default("other") @db.VarChar(50)
+  is_packed  Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz()
+
+  trip Trip @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+
+  @@map("packing_items")
+}
+
+// ──────────────────────────────────────────────────────────────
+// 3.8 Trip Notes
+// ──────────────────────────────────────────────────────────────
+model TripNote {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trip_id    String   @db.Uuid
+  stop_id    String?  @db.Uuid
+  content    String   @db.Text
+  created_at DateTime @default(now()) @db.Timestamptz()
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz()
+
+  trip Trip      @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  stop TripStop? @relation(fields: [stop_id], references: [id], onDelete: Cascade)
+
+  @@map("trip_notes")
+}

@@ -1,0 +1,25 @@
+{
+  "name": "traveloop",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "build:frontend": "npm run build --workspace=apps/frontend",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "lint": "npm run lint --workspaces --if-present",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f backend",
+    "docker:reset": "docker compose down -v && docker compose up --build -d",
+    "seed": "docker exec traveloop-backend npm run seed",
+    "migrate": "docker exec traveloop-backend npx prisma migrate deploy"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

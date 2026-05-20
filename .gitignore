@@ -1,0 +1,50 @@
+# ─── Dependencies ─────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ─── Build outputs ────────────────────────────────────────────
+dist/
+build/
+.cache/
+out/
+*.tsbuildinfo
+
+# ─── Environment files (never commit real secrets) ────────────
+.env
+.env.local
+.env.*.local
+# Keep these (they are templates, no real secrets):
+# .env.example
+# infrastructure/docker/.env.docker   ← only if it has no real secrets
+
+# ─── Prisma ───────────────────────────────────────────────────
+apps/backend/node_modules/.prisma/
+
+# ─── Logs ─────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─── OS ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Editor ───────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ─── Backup / temp files ──────────────────────────────────────
+*.bak
+*.orig
+*.backup
+*.tmp
+
+# ─── Test coverage ────────────────────────────────────────────
+coverage/
+.nyc_output/
