@@ -4,16 +4,15 @@ import { p } from '../utils/params';
 
 export async function getNotes(req: Request, res: Response, next: NextFunction) {
   try {
-    const { stop_id } = req.query as { stop_id?: string };
-    const notes = await noteService.getNotes(p(req, 'id'), req.user!.id, stop_id);
+    const stopId = req.query.stopId as string | undefined;
+    const notes = await noteService.getNotes(p(req, 'id'), req.user!.id, stopId);
     res.json({ success: true, data: notes });
   } catch (err) { next(err); }
 }
 
 export async function createNote(req: Request, res: Response, next: NextFunction) {
   try {
-    const { content, stop_id } = req.body;
-    const note = await noteService.createNote(p(req, 'id'), req.user!.id, content, stop_id);
+    const note = await noteService.createNote(p(req, 'id'), req.user!.id, req.body);
     res.status(201).json({ success: true, data: note });
   } catch (err) { next(err); }
 }
@@ -27,8 +26,7 @@ export async function getNote(req: Request, res: Response, next: NextFunction) {
 
 export async function updateNote(req: Request, res: Response, next: NextFunction) {
   try {
-    const { content } = req.body;
-    const note = await noteService.updateNote(p(req, 'id'), req.user!.id, p(req, 'noteId'), content);
+    const note = await noteService.updateNote(p(req, 'id'), req.user!.id, p(req, 'noteId'), req.body);
     res.json({ success: true, data: note });
   } catch (err) { next(err); }
 }

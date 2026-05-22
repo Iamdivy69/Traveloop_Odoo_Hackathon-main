@@ -38,9 +38,9 @@ curl http://localhost:3000/api/v1/health
 docker exec traveloop-backend npm run seed
 ```
 
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:3001
 - Backend API: http://localhost:3000/api/v1
-- Database: localhost:5434
+- Database: localhost:5432
 
 ### Option 2: Local Development
 
@@ -58,7 +58,7 @@ npm run dev
 
 ### Prerequisites for local dev
 - Node.js 20+
-- PostgreSQL 15+ running on port 5434 (or adjust DATABASE_URL)
+- PostgreSQL 15+ running on port 5432 (or adjust DATABASE_URL)
 - Copy `apps/backend/.env.example` → `apps/backend/.env`
 - Copy `apps/frontend/.env.example` → `apps/frontend/.env` (if exists)
 

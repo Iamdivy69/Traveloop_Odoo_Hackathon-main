@@ -1,369 +1,415 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../store/useStore';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search,
-  MapPin,
-  Calendar,
-  Eye,
-  ArrowRight,
-  Share2,
-  Trash2,
-  AlertTriangle,
-  X,
-  Facebook,
-  Twitter,
-  Linkedin,
-  Link as LinkIcon,
-  Plus,
+  Search, Calendar, DollarSign, Share2, Trash2, Eye, Plus,
+  Globe, Lock, MapPin, ChevronRight, Loader2, AlertTriangle, X,
+  Facebook, Twitter, Linkedin, Link as LinkIcon, ClipboardList,
+  Plane, Clock, MoreHorizontal,
 } from 'lucide-react';
+import { useTrips, useDeleteTrip, type Trip, type TripFilters } from '../hooks/useTrips';
 
-type TabType = 'all' | 'upcoming' | 'ongoing' | 'completed';
+
+type TabStatus = 'all' | 'upcoming' | 'active' | 'past' | 'draft';
+
+const TABS: { key: TabStatus; label: string }[] = [
+  { key: 'all', label: 'All Trips' },
+  { key: 'upcoming', label: 'Upcoming' },
+  { key: 'active', label: 'Active' },
+  { key: 'past', label: 'Past' },
+  { key: 'draft', label: 'Drafts' },
+];
+
+const EMPTY_MESSAGES: Record<TabStatus, { icon: React.ReactNode; title: string; subtitle: string }> = {
+  all: { icon: <Plane className="w-10 h-10 text-[#e2e8f0]" />, title: 'No trips yet', subtitle: "Your adventures start here. Plan your first trip!" },
+  upcoming: { icon: <Calendar className="w-10 h-10 text-[#e2e8f0]" />, title: 'No upcoming trips', subtitle: "Nothing on the horizon yet. Start planning!" },
+  active: { icon: <Clock className="w-10 h-10 text-[#e2e8f0]" />, title: "You're not travelling right now", subtitle: "Trips that are currently in progress will appear here." },
+  past: { icon: <MapPin className="w-10 h-10 text-[#e2e8f0]" />, title: 'No past trips', subtitle: "Completed adventures will be archived here." },
+  draft: { icon: <ClipboardList className="w-10 h-10 text-[#e2e8f0]" />, title: 'No drafts', subtitle: "Trips without dates are saved as drafts." },
+};
+
+const TRIP_GRADIENTS = [
+  'from-[#E8604C] to-[#f59e0b]',
+  'from-[#3b82f6] to-[#8b5cf6]',
+  'from-[#059669] to-[#0ea5e9]',
+  'from-[#ec4899] to-[#f43f5e]',
+  'from-[#f59e0b] to-[#ef4444]',
+  'from-[#6366f1] to-[#a855f7]',
+];
+
+function tripGradient(id: string) {
+  const idx = id.charCodeAt(0) % TRIP_GRADIENTS.length;
+  return TRIP_GRADIENTS[idx];
+}
+
+function formatDate(dateStr?: string) {
+  if (!dateStr) return null;
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function TripCardSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl border border-[#f1f5f9] overflow-hidden animate-pulse">
+      <div className="h-44 bg-[#f1f5f9]" />
+      <div className="p-5 space-y-3">
+        <div className="h-4 bg-[#f1f5f9] rounded-lg w-3/4" />
+        <div className="h-3 bg-[#f1f5f9] rounded-lg w-1/2" />
+        <div className="h-3 bg-[#f1f5f9] rounded-lg w-2/3" />
+        <div className="h-9 bg-[#f1f5f9] rounded-xl mt-4" />
+      </div>
+    </div>
+  );
+}
+
+function TripStatusBadge({ trip }: { trip: Trip }) {
+  const now = new Date();
+  const start = trip.start_date ? new Date(trip.start_date) : null;
+  const end = trip.end_date ? new Date(trip.end_date) : null;
+
+  if (!start) return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#f1f5f9] text-[#64748B]">Draft</span>;
+  if (end && end < now) return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#f0fdf4] text-[#16a34a]">Completed</span>;
+  if (start <= now && end && end >= now) return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#E8604C] text-white"><span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />Active</span>;
+  return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#eff6ff] text-[#2563eb]">Upcoming</span>;
+}
 
 export default function TripListing() {
   const navigate = useNavigate();
-  const { trips, setActiveTrip, deleteTrip } = useStore();
-  const [activeTab, setActiveTab] = useState<TabType>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<TabStatus>('all');
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
 
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [tripToDelete, setTripToDelete] = useState<string | null>(null);
-  const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [tripToShare, setTripToShare] = useState<{id: string, name: string} | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [shareTrip, setShareTrip] = useState<Trip | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
-  const confirmDelete = () => {
-    if (tripToDelete) {
-      deleteTrip(tripToDelete);
-      setDeleteModalOpen(false);
-      setTripToDelete(null);
-    }
+  const deleteTrip = useDeleteTrip();
+
+  // Debounce search
+  const debounceRef = useState<ReturnType<typeof setTimeout>>(null!)[0];
+  const handleSearchChange = useCallback((val: string) => {
+    setSearch(val);
+    clearTimeout(debounceRef);
+    const t = setTimeout(() => { setDebouncedSearch(val); setPage(1); }, 400);
+    // @ts-ignore store ref
+    (handleSearchChange as any)._t = t;
+  }, []);
+
+  const filters: TripFilters = {
+    ...(activeTab !== 'all' && { status: activeTab }),
+    ...(debouncedSearch && { search: debouncedSearch }),
+    page,
+    limit: 8,
   };
 
-  const handleShare = (platform: string) => {
-    if (!tripToShare) return;
-    const url = `${window.location.origin}/trips/${tripToShare.id}/view`;
-    const text = `Check out my itinerary: ${tripToShare.name} on Traveloop!`;
-    
-    if (platform === 'copy') {
-      navigator.clipboard.writeText(url);
-      alert('Link copied to clipboard!');
-    } else if (platform === 'twitter') {
-      window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
-    } else if (platform === 'facebook') {
-      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`);
-    } else if (platform === 'linkedin') {
-      window.open(`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}&title=${encodeURIComponent(tripToShare.name)}`);
-    }
-    setShareModalOpen(false);
+  const { data, isLoading, isError } = useTrips(filters);
+  const trips = data?.items ?? [];
+  const hasNext = data?.hasNext ?? false;
+
+  const handleTabChange = (tab: TabStatus) => {
+    setActiveTab(tab);
+    setPage(1);
   };
 
-  const filtered = trips
-    .filter((t) => activeTab === 'all' || t.status === activeTab)
-    .filter((t) =>
-      !searchQuery ||
-      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.destination.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    await deleteTrip.mutateAsync(deleteId);
+    setDeleteId(null);
+  };
 
-  const tabs: { key: TabType; label: string; count: number }[] = [
-    { key: 'all', label: 'All Trips', count: trips.length },
-    { key: 'upcoming', label: 'Upcoming', count: trips.filter(t => t.status === 'upcoming').length },
-    { key: 'ongoing', label: 'Ongoing', count: trips.filter(t => t.status === 'ongoing').length },
-    { key: 'completed', label: 'Past', count: trips.filter(t => t.status === 'completed').length },
-  ];
+  const handleShare = (platform: string, trip: Trip) => {
+    const url = `${window.location.origin}/shared/${trip.share_token}`;
+    const text = `Check out my trip: ${trip.name} on Traveloop!`;
+    if (platform === 'copy') { navigator.clipboard.writeText(url); }
+    else if (platform === 'twitter') window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
+    else if (platform === 'facebook') window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`);
+    else if (platform === 'linkedin') window.open(`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}&title=${encodeURIComponent(trip.name)}`);
+  };
 
-  const upcomingAndOngoing = filtered.filter(t => t.status !== 'completed');
-  const past = filtered.filter(t => t.status === 'completed');
+  const emptyState = EMPTY_MESSAGES[activeTab];
 
   return (
     <div className="page-transition">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-heading">My Trips</h1>
-          <p className="text-[#64748B] text-sm mt-1">Manage your past, ongoing, and upcoming adventures.</p>
+          <p className="text-[#64748B] text-sm mt-1">
+            {data ? `${data.total} trip${data.total !== 1 ? 's' : ''} in total` : 'Manage your adventures'}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
             <input
+              id="trip-search"
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search destinations..."
-              className="input-field pl-9 pr-4 py-2.5 text-sm w-52"
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search trips…"
+              className="pl-9 pr-4 py-2.5 text-sm w-52 bg-white border border-[#e2e8f0] rounded-xl text-[#0b1c30] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#E8604C]/30 focus:border-[#E8604C] transition-all"
             />
           </div>
-          <button 
+          <button
+            id="new-trip-btn"
             onClick={() => navigate('/trips/new')}
-            className="btn-primary py-2.5 text-sm flex items-center gap-2"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#E8604C] text-white text-sm font-semibold rounded-xl hover:bg-[#d44e3b] transition-all shadow-sm hover:shadow-md"
           >
-            <Plus className="w-4 h-4" />
-            Plan Trip
+            <Plus className="w-4 h-4" /> New Trip
           </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-8">
-        {tabs.map((tab) => (
+      {/* ── Tabs ── */}
+      <div className="flex gap-2 mb-8 flex-wrap">
+        {TABS.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            id={`tab-${tab.key}`}
+            onClick={() => handleTabChange(tab.key)}
+            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
               activeTab === tab.key
-                ? 'bg-[#001b26] text-white'
+                ? 'bg-[#001b26] text-white shadow-sm'
                 : 'bg-white text-[#64748B] border border-[#e2e8f0] hover:bg-[#f1f5f9] hover:text-[#0b1c30]'
             }`}
           >
-            {tab.label} ({tab.count})
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Trip Cards */}
-      {upcomingAndOngoing.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
-          {upcomingAndOngoing.map((trip) => (
-            <div
-              key={trip.id}
-              onClick={() => { setActiveTrip(trip); navigate('/itinerary/view'); }}
-              className="card card-interactive overflow-hidden text-left group cursor-pointer"
-            >
-              <div className="relative h-48">
-                <img src={trip.coverImage} alt={trip.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute top-3 left-3">
-                  <span className={`badge ${
-                    trip.status === 'ongoing' ? 'bg-[#E8604C] text-white' : 'bg-[#ecfdf5] text-[#059669]'
-                  }`}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                    {trip.status === 'ongoing' ? 'Ongoing' : 'Upcoming'}
-                  </span>
-                </div>
-              </div>
-              <div className="p-5">
-                <div className="flex items-start justify-between">
-                  <h3 className="text-h3 font-heading font-bold text-[#0b1c30]">{trip.name}</h3>
-                  <div className="flex gap-1 z-10">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setTripToShare({ id: trip.id, name: trip.name }); setShareModalOpen(true); }}
-                      className="p-1 rounded-lg hover:bg-[#f1f5f9] text-[#94a3b8]"
-                      title="Share"
-                    >
-                      <Share2 className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setTripToDelete(trip.id); setDeleteModalOpen(true); }}
-                      className="p-1 rounded-lg hover:bg-[#fef2f2] text-[#E8604C]"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setActiveTrip(trip); navigate('/itinerary/view'); }}
-                      className="p-1 rounded-lg hover:bg-[#f1f5f9] text-[#94a3b8]"
-                      title="View"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 text-[#64748B] text-sm mt-1">
-                  <MapPin className="w-3.5 h-3.5" />
-                  {trip.destination}
-                </div>
-                <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#f1f5f9]">
-                  <div className="text-xs text-[#94a3b8]">
-                    <span className="uppercase font-semibold tracking-wider">Start</span>
-                    <p className="text-sm text-[#0b1c30] font-medium mt-0.5">{trip.startDate}</p>
-                  </div>
-                  <Plane className="w-4 h-4 text-[#e2e8f0]" />
-                  <div className="text-xs text-[#94a3b8] text-right">
-                    <span className="uppercase font-semibold tracking-wider">End</span>
-                    <p className="text-sm text-[#0b1c30] font-medium mt-0.5">{trip.endDate}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setActiveTrip(trip); navigate('/itinerary/view'); }}
-                  className="w-full mt-4 py-2.5 rounded-xl border border-[#e2e8f0] text-sm font-medium text-[#64748B] hover:bg-[#f1f5f9] hover:text-[#0b1c30] transition-all flex items-center justify-center gap-1.5"
+      {/* ── Trip Grid ── */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <TripCardSkeleton />
+          <TripCardSkeleton />
+          <TripCardSkeleton />
+        </div>
+      ) : isError ? (
+        <div className="card p-12 text-center">
+          <AlertTriangle className="w-10 h-10 text-[#E8604C] mx-auto mb-3" />
+          <p className="text-[#64748B]">Failed to load trips. Please try again.</p>
+        </div>
+      ) : trips.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card p-14 text-center"
+        >
+          <div className="mx-auto mb-4">{emptyState.icon}</div>
+          <h3 className="font-bold text-[#0b1c30] text-lg mb-1">{emptyState.title}</h3>
+          <p className="text-[#64748B] text-sm mb-6">{emptyState.subtitle}</p>
+          {activeTab !== 'past' && (
+            <button onClick={() => navigate('/trips/new')} className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#E8604C] text-white text-sm font-semibold rounded-xl hover:bg-[#d44e3b] transition-all">
+              <Plus className="w-4 h-4" /> Plan a Trip
+            </button>
+          )}
+        </motion.div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <AnimatePresence mode="popLayout">
+              {trips.map((trip, i) => (
+                <motion.div
+                  key={trip.id}
+                  layout
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0, transition: { delay: i * 0.04 } }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="group bg-white rounded-2xl border border-[#f1f5f9] overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col"
                 >
-                  {trip.status === 'ongoing' ? 'View Itinerary' : 'Plan Details'} <ArrowRight className="w-4 h-4" />
+                  {/* Cover image / gradient */}
+                  <div className="relative h-44 overflow-hidden flex-shrink-0">
+                    {trip.cover_photo_url ? (
+                      <img
+                        src={trip.cover_photo_url}
+                        alt={trip.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className={`w-full h-full bg-gradient-to-br ${tripGradient(trip.id)} flex items-center justify-center`}>
+                        <MapPin className="w-10 h-10 text-white/40" />
+                      </div>
+                    )}
+                    <div className="absolute top-3 left-3">
+                      <TripStatusBadge trip={trip} />
+                    </div>
+                    {/* Action menu */}
+                    <div className="absolute top-3 right-3">
+                      <div className="relative">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === trip.id ? null : trip.id); }}
+                          className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-[#64748B] hover:bg-white hover:text-[#0b1c30] transition-colors shadow-sm"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+                        <AnimatePresence>
+                          {openMenu === trip.id && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, y: -4 }}
+                              className="absolute right-0 top-10 z-20 w-40 bg-white rounded-xl shadow-xl border border-[#f1f5f9] py-1 overflow-hidden"
+                            >
+                              <button
+                                onClick={(e) => { e.stopPropagation(); navigate(`/itinerary/build/${trip.id}`); setOpenMenu(null); }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#0b1c30] hover:bg-[#f8fafc] transition-colors"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-[#64748B]" /> View
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setShareTrip(trip); setOpenMenu(null); }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#0b1c30] hover:bg-[#f8fafc] transition-colors"
+                              >
+                                <Share2 className="w-3.5 h-3.5 text-[#64748B]" /> Share
+                              </button>
+                              <div className="h-px bg-[#f1f5f9] my-1" />
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDeleteId(trip.id); setOpenMenu(null); }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#E8604C] hover:bg-[#fef2f2] transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Delete
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                    {trip.is_public && (
+                      <div className="absolute bottom-3 right-3">
+                        <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-[10px] font-bold text-[#2563eb]">
+                          <Globe className="w-2.5 h-2.5" /> Public
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card body */}
+                  <div className="p-5 flex flex-col flex-1">
+                    <h3 className="font-bold text-[#0b1c30] font-heading text-base leading-snug mb-2 line-clamp-1">
+                      {trip.name}
+                    </h3>
+
+                    {/* Dates */}
+                    {trip.start_date ? (
+                      <div className="flex items-center gap-1.5 text-xs text-[#64748B] mb-3">
+                        <Calendar className="w-3.5 h-3.5 shrink-0" />
+                        {formatDate(trip.start_date)}
+                        {trip.end_date && <> → {formatDate(trip.end_date)}</>}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-xs text-[#94a3b8] italic mb-3">
+                        <Calendar className="w-3.5 h-3.5" /> No dates set
+                      </div>
+                    )}
+
+                    {/* Meta row */}
+                    <div className="flex items-center gap-3 text-xs text-[#94a3b8] mt-auto mb-4">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> {trip._count?.stops ?? 0} stop{(trip._count?.stops ?? 0) !== 1 ? 's' : ''}
+                      </span>
+                      {trip.total_budget && (
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="w-3 h-3" />
+                          {Number(trip.total_budget).toLocaleString('en-IN')}
+                        </span>
+                      )}
+                      {trip.is_public
+                        ? <span className="flex items-center gap-1"><Globe className="w-3 h-3 text-[#2563eb]" /> Public</span>
+                        : <span className="flex items-center gap-1"><Lock className="w-3 h-3" /> Private</span>
+                      }
+                    </div>
+
+                    {/* CTA */}
+                    <button
+                      onClick={() => navigate(`/itinerary/build/${trip.id}`)}
+                      className="w-full py-2.5 rounded-xl border border-[#e2e8f0] text-sm font-semibold text-[#64748B] hover:bg-[#f8fafc] hover:text-[#0b1c30] hover:border-[#E8604C] transition-all flex items-center justify-center gap-1.5 group/btn"
+                    >
+                      Build Itinerary <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {/* Load more */}
+          {hasNext && (
+            <div className="flex justify-center mt-8">
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                className="px-6 py-2.5 bg-white border border-[#e2e8f0] text-sm font-semibold text-[#64748B] rounded-xl hover:bg-[#f8fafc] hover:text-[#0b1c30] transition-all"
+              >
+                Load more trips
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Modals ── */}
+
+
+      {/* Delete confirm */}
+      <AnimatePresence>
+        {deleteId && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div className="absolute inset-0 bg-[#001b26]/40 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDeleteId(null)} />
+            <motion.div className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+              <div className="w-12 h-12 rounded-full bg-[#fef2f2] flex items-center justify-center mb-4">
+                <AlertTriangle className="w-6 h-6 text-[#E8604C]" />
+              </div>
+              <h3 className="text-lg font-bold text-[#0b1c30] font-heading mb-2">Delete Trip?</h3>
+              <p className="text-sm text-[#64748B] mb-6">This will permanently delete the trip and all its stops, activities, and notes. This cannot be undone.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-xl border border-[#e2e8f0] text-sm font-semibold text-[#64748B] hover:bg-[#f1f5f9] transition-all">Cancel</button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleteTrip.isPending}
+                  className="flex-1 py-2.5 rounded-xl bg-[#E8604C] text-white text-sm font-semibold hover:bg-[#d44e3b] disabled:opacity-60 transition-all flex items-center justify-center gap-2"
+                >
+                  {deleteTrip.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Deleting…</> : 'Delete'}
                 </button>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
-      {/* Past Trips */}
-      {past.length > 0 && (
-        <div>
-          <h2 className="text-h4 font-heading font-bold text-[#0b1c30] mb-4">Past Trips</h2>
-          <div className="card divide-y divide-[#f1f5f9]">
-            {past.map((trip) => (
-              <div key={trip.id} className="flex items-center gap-4 p-4 hover:bg-[#f8fafc] transition-colors">
-                <img src={trip.coverImage} alt={trip.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-[#0b1c30] text-sm">{trip.name}</h3>
-                    <span className="badge bg-[#f1f5f9] text-[#64748B]">Completed</span>
-                  </div>
-                  <p className="text-xs text-[#94a3b8] mt-0.5">{trip.description || trip.destination}</p>
-                </div>
-                <div className="text-right text-xs text-[#94a3b8] flex-shrink-0 hidden sm:block">
-                  <p className="font-medium text-[#0b1c30]">{trip.startDate} - {trip.endDate}</p>
-                  <p>{trip.sections?.length || 4} Days</p>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setTripToShare({ id: trip.id, name: trip.name }); setShareModalOpen(true); }}
-                    className="w-9 h-9 rounded-xl border border-[#e2e8f0] flex items-center justify-center text-[#64748B] hover:bg-[#f1f5f9] transition-colors flex-shrink-0"
-                    title="Share"
-                  >
-                    <Share2 className="w-4 h-4" />
+      {/* Share modal */}
+      <AnimatePresence>
+        {shareTrip && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div className="absolute inset-0 bg-[#001b26]/40 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShareTrip(null)} />
+            <motion.div className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+              <button onClick={() => setShareTrip(null)} className="absolute top-4 right-4 p-1.5 rounded-lg text-[#94a3b8] hover:text-[#0b1c30] hover:bg-[#f1f5f9] transition-colors"><X className="w-4 h-4" /></button>
+              <div className="w-12 h-12 rounded-full bg-[#f1f5f9] flex items-center justify-center mb-4"><Share2 className="w-6 h-6 text-[#0b1c30]" /></div>
+              <h3 className="text-lg font-bold text-[#0b1c30] font-heading mb-1">Share "{shareTrip.name}"</h3>
+              <p className="text-sm text-[#64748B] mb-5">Share your itinerary with friends and family.</p>
+              <div className="grid grid-cols-4 gap-3 mb-4">
+                {[
+                  { key: 'copy', icon: <LinkIcon className="w-5 h-5" />, label: 'Copy', bg: 'border-[#e2e8f0] text-[#64748B] hover:bg-[#f1f5f9]' },
+                  { key: 'facebook', icon: <Facebook className="w-5 h-5" />, label: 'Facebook', bg: 'bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white' },
+                  { key: 'twitter', icon: <Twitter className="w-5 h-5" />, label: 'X', bg: 'bg-[#1DA1F2]/10 text-[#1DA1F2] hover:bg-[#1DA1F2] hover:text-white' },
+                  { key: 'linkedin', icon: <Linkedin className="w-5 h-5" />, label: 'LinkedIn', bg: 'bg-[#0A66C2]/10 text-[#0A66C2] hover:bg-[#0A66C2] hover:text-white' },
+                ].map(({ key, icon, label, bg }) => (
+                  <button key={key} onClick={() => handleShare(key, shareTrip)} className="flex flex-col items-center gap-1.5 group">
+                    <div className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all ${bg}`}>{icon}</div>
+                    <span className="text-[10px] font-semibold text-[#64748B]">{label}</span>
                   </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setTripToDelete(trip.id); setDeleteModalOpen(true); }}
-                    className="w-9 h-9 rounded-xl border border-[#fef2f2] flex items-center justify-center text-[#E8604C] hover:bg-[#fef2f2] transition-colors flex-shrink-0"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setActiveTrip(trip); navigate('/itinerary/view'); }}
-                    className="w-9 h-9 rounded-xl border border-[#e2e8f0] flex items-center justify-center text-[#64748B] hover:bg-[#f1f5f9] transition-colors flex-shrink-0"
-                    title="View"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </div>
+                ))}
               </div>
-            ))}
+              <div className="flex items-center gap-2 p-2.5 bg-[#f8fafc] rounded-xl border border-[#f1f5f9]">
+                <span className="truncate text-xs text-[#64748B] flex-1 font-mono">{`${window.location.origin}/shared/${shareTrip.share_token}`}</span>
+                <button onClick={() => handleShare('copy', shareTrip)} className="text-xs font-bold text-[#E8604C] hover:text-[#d44e3b] shrink-0 transition-colors">Copy</button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {filtered.length === 0 && (
-        <div className="card p-12 text-center">
-          <Calendar className="w-12 h-12 text-[#e2e8f0] mx-auto mb-3" />
-          <p className="text-[#64748B] mb-4">No {activeTab === 'all' ? '' : activeTab} trips found</p>
-          <button onClick={() => navigate('/trips/new')} className="btn-primary text-sm">
-            Create a Trip
-          </button>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {deleteModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#001b26]/40 backdrop-blur-sm" onClick={() => setDeleteModalOpen(false)} />
-          <div className="card w-full max-w-sm relative z-10 p-6 animate-scaleIn">
-            <button 
-              onClick={() => setDeleteModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 text-[#94a3b8] hover:text-[#0b1c30] rounded-lg hover:bg-[#f1f5f9] transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="w-12 h-12 rounded-full bg-[#fef2f2] flex items-center justify-center mb-4">
-              <AlertTriangle className="w-6 h-6 text-[#E8604C]" />
-            </div>
-            <h3 className="text-h4 font-heading font-bold text-[#0b1c30] mb-2">Delete Trip?</h3>
-            <p className="text-[#64748B] text-sm mb-6">
-              Are you sure you want to delete this trip? This action cannot be undone.
-            </p>
-            <div className="flex gap-3 w-full">
-              <button 
-                onClick={() => setDeleteModalOpen(false)}
-                className="btn-secondary flex-1 justify-center"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmDelete}
-                className="btn-primary flex-1 justify-center bg-[#E8604C] hover:bg-[#ae311e]"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Share Modal */}
-      {shareModalOpen && tripToShare && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#001b26]/40 backdrop-blur-sm" onClick={() => setShareModalOpen(false)} />
-          <div className="card w-full max-w-sm relative z-10 p-6 animate-scaleIn">
-            <button 
-              onClick={() => setShareModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 text-[#94a3b8] hover:text-[#0b1c30] rounded-lg hover:bg-[#f1f5f9] transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="w-12 h-12 rounded-full bg-[#f1f5f9] flex items-center justify-center mb-4">
-              <Share2 className="w-6 h-6 text-[#0b1c30]" />
-            </div>
-            <h3 className="text-h4 font-heading font-bold text-[#0b1c30] mb-2">Share "{tripToShare.name}"</h3>
-            <p className="text-[#64748B] text-sm mb-6">
-              Share your exciting itinerary with friends and family across platforms.
-            </p>
-            <div className="grid grid-cols-4 gap-3 mb-4">
-              <button onClick={() => handleShare('copy')} className="flex flex-col items-center gap-2 group">
-                <div className="w-12 h-12 rounded-full border border-[#e2e8f0] flex items-center justify-center text-[#64748B] group-hover:bg-[#f1f5f9] transition-colors">
-                  <LinkIcon className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] font-semibold text-[#64748B]">Copy Link</span>
-              </button>
-              <button onClick={() => handleShare('facebook')} className="flex flex-col items-center gap-2 group">
-                <div className="w-12 h-12 rounded-full bg-[#1877F2]/10 flex items-center justify-center text-[#1877F2] group-hover:bg-[#1877F2] group-hover:text-white transition-colors">
-                  <Facebook className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] font-semibold text-[#64748B]">Facebook</span>
-              </button>
-              <button onClick={() => handleShare('twitter')} className="flex flex-col items-center gap-2 group">
-                <div className="w-12 h-12 rounded-full bg-[#1DA1F2]/10 flex items-center justify-center text-[#1DA1F2] group-hover:bg-[#1DA1F2] group-hover:text-white transition-colors">
-                  <Twitter className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] font-semibold text-[#64748B]">X / Twitter</span>
-              </button>
-              <button onClick={() => handleShare('linkedin')} className="flex flex-col items-center gap-2 group">
-                <div className="w-12 h-12 rounded-full bg-[#0A66C2]/10 flex items-center justify-center text-[#0A66C2] group-hover:bg-[#0A66C2] group-hover:text-white transition-colors">
-                  <Linkedin className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] font-semibold text-[#64748B]">LinkedIn</span>
-              </button>
-            </div>
-            <div className="w-full flex items-center gap-2 p-2 bg-[#f1f5f9] rounded-lg mt-2">
-              <div className="truncate text-xs text-[#64748B] flex-1 font-medium">{`${window.location.origin}/trips/${tripToShare.id}/view`}</div>
-              <button onClick={() => handleShare('copy')} className="text-xs font-bold text-[#E8604C] shrink-0 hover:text-[#ae311e] transition-colors">Copy</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Footer */}
-      <footer className="mt-16 pt-8 pb-4 border-t border-[#e2e8f0]">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <h3 className="font-bold text-[#0b1c30] font-heading">Traveloop</h3>
-            <p className="text-xs text-[#94a3b8] mt-0.5">© 2024 Traveloop. Your premium travel assistant.</p>
-          </div>
-          <div className="flex gap-6 text-xs text-[#94a3b8]">
-            <button className="hover:text-[#0b1c30] transition-colors">Privacy Policy</button>
-            <button className="hover:text-[#0b1c30] transition-colors">Terms of Service</button>
-            <button className="hover:text-[#0b1c30] transition-colors">Cookies</button>
-            <button className="hover:text-[#0b1c30] transition-colors">Contact Us</button>
-          </div>
-        </div>
-      </footer>
+      {/* Click-outside for action menus */}
+      {openMenu && <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />}
     </div>
-  );
-}
-
-function Plane(props: React.SVGProps<SVGSVGElement> & { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
-    </svg>
   );
 }

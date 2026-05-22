@@ -10,6 +10,7 @@ router.use(authenticate);
 
 router.get('/', validateQuery(tripListQuerySchema), tripController.listTrips);
 router.post('/', validate(createTripSchema), tripController.createTrip);
+router.get('/:id/stats', tripController.getTripStats);
 router.get('/:id/budget', tripController.getBudget);
 router.post('/:id/share', tripController.toggleShare);
 router.get('/:id', tripController.getTrip);

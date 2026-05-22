@@ -42,6 +42,21 @@ export function errorHandler(
     return;
   }
 
+  if (
+    err.name === 'PrismaClientValidationError' ||
+    (err as any).code === 'P2023' ||
+    err.message.includes('Inconsistent column data')
+  ) {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'BAD_REQUEST',
+        message: 'Invalid UUID format or parameter value',
+      },
+    });
+    return;
+  }
+
   if (err.name === 'PrismaClientKnownRequestError') {
     const prismaErr = err as any;
     if (prismaErr.code === 'P2002') {

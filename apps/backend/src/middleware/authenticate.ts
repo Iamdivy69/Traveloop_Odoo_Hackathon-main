@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import prisma from '../db/prisma';
 
 /** User context attached after successful JWT verification (JWT payload uses `sub` for user id). */
 export interface AuthenticatedUser {
@@ -26,9 +27,10 @@ type JwtAuthClaims = {
   sub: string;
   email: string;
   is_admin: boolean;
+  token_version?: number;
 };
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -53,6 +55,32 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     const decoded = jwt.verify(token, secret) as jwt.JwtPayload & JwtAuthClaims;
     if (!decoded.sub || typeof decoded.email !== 'string' || typeof decoded.is_admin !== 'boolean') {
       res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.sub },
+      select: { deleted_at: true, token_version: true, is_suspended: true }
+    });
+
+    if (!user || user.deleted_at !== null) {
+      res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+
+    if (user.is_suspended) {
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'ACCOUNT_SUSPENDED',
+          message: 'Your account has been suspended'
+        }
+      });
+      return;
+    }
+
+    if (decoded.token_version !== undefined && user.token_version !== decoded.token_version) {
+      res.status(401).json({ success: false, error: 'Session expired. Please log in again.' });
       return;
     }
 

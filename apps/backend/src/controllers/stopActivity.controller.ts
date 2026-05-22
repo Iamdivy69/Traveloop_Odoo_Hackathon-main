@@ -29,3 +29,10 @@ export async function deleteStopActivity(req: Request, res: Response, next: Next
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 }
+
+export async function getBudgetBreakdown(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await saService.getBudgetBreakdown(p(req, 'id'), req.user!.id);
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+}

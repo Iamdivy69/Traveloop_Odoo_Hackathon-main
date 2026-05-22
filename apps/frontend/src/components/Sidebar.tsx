@@ -22,13 +22,13 @@ import {
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin } = useStore();
+  const { isAdmin, activeTrip } = useStore();
   const { user, logout } = useAuthStore();
 
   const mainNav = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/trips', label: 'My Trips', icon: Compass },
-    { path: '/itinerary/build', label: 'Itinerary', icon: Calendar },
+    { path: activeTrip ? `/itinerary/build/${activeTrip.id}` : '/trips', label: 'Itinerary', icon: Calendar },
     { path: '/search-cities', label: 'Cities', icon: Globe },
     { path: '/search', label: 'Activities', icon: Search },
     { path: '/community', label: 'Community', icon: Users },

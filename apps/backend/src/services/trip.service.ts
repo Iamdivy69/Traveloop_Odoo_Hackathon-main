@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import prisma from '../db/prisma';
 import { AppError } from '../middleware/errorHandler';
 import type { CreateTripInput, TripListQuery, UpdateTripInput } from '../schemas/trip.schema';
+import { BUDGET } from '../utils/budgetConstants';
 
 /** Start of current calendar day (UTC) — matches user stats trip bucketing. */
 function startOfUtcToday(): Date {
@@ -35,31 +36,64 @@ export async function listTrips(userId: string, query: TripListQuery) {
 
   if (query.status === 'upcoming') {
     where.start_date = { gt: sod };
-  } else if (query.status === 'completed') {
+  } else if (query.status === 'past') {
     where.end_date = { lt: sod };
-  } else if (query.status === 'ongoing') {
+  } else if (query.status === 'active') {
     where.AND = [{ start_date: { lte: now } }, { end_date: { gte: now } }];
+  } else if (query.status === 'draft') {
+    where.start_date = null;
   }
 
-  const trips = await prisma.trip.findMany({
-    where,
-    skip: query.offset,
-    take: query.limit,
-    orderBy: { start_date: 'asc' },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      start_date: true,
-      end_date: true,
-      cover_photo_url: true,
-      is_public: true,
-      total_budget: true,
-      _count: { select: { stops: true } },
-    },
-  });
+  if (query.search) {
+    const searchWhere: Prisma.TripWhereInput = {
+      name: { contains: query.search, mode: 'insensitive' },
+    };
+    where.AND = where.AND
+      ? [...(Array.isArray(where.AND) ? where.AND : [where.AND]), searchWhere]
+      : [searchWhere];
+  }
 
-  return trips;
+  const page = query.page;
+  const limit = query.limit;
+  const skip = (page - 1) * limit;
+
+  const [trips, total] = await Promise.all([
+    prisma.trip.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { created_at: 'desc' },
+      select: {
+        id: true,
+        user_id: true,
+        name: true,
+        description: true,
+        start_date: true,
+        end_date: true,
+        cover_photo_url: true,
+        is_public: true,
+        share_token: true,
+        total_budget: true,
+        created_at: true,
+        _count: {
+          select: {
+            stops: true,
+            expenses: true,
+          },
+        },
+      },
+    }),
+    prisma.trip.count({ where }),
+  ]);
+
+  return {
+    items: trips,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+    hasNext: page * limit < total,
+  };
 }
 
 export async function createTrip(userId: string, data: CreateTripInput) {
@@ -68,8 +102,8 @@ export async function createTrip(userId: string, data: CreateTripInput) {
       user_id: userId,
       name: data.name,
       description: data.description,
-      start_date: new Date(data.start_date),
-      end_date: new Date(data.end_date),
+      start_date: data.start_date ? new Date(data.start_date) : null,
+      end_date: data.end_date ? new Date(data.end_date) : null,
       cover_photo_url: data.cover_photo_url,
       total_budget: data.total_budget,
       is_public: data.is_public ?? false,
@@ -108,8 +142,31 @@ export async function updateTrip(tripId: string, userId: string, data: UpdateTri
   const start =
     data.start_date !== undefined ? new Date(data.start_date) : existing.start_date;
   const end = data.end_date !== undefined ? new Date(data.end_date) : existing.end_date;
-  if (end <= start) {
+  if (start && end && end <= start) {
     throw new AppError(400, 'VALIDATION_ERROR', 'end_date must be after start_date');
+  }
+
+  // FIX (Edge Case): When trip dates are being shrunk, verify that no existing
+  // stop would fall outside the new date boundaries. This prevents the itinerary
+  // timeline from silently becoming invalid after a date update.
+  if (start && end) {
+    const outOfBoundsStop = await prisma.tripStop.findFirst({
+      where: {
+        trip_id: tripId,
+        OR: [
+          { arrival_date: { lt: start } },
+          { departure_date: { gt: end } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (outOfBoundsStop) {
+      throw new AppError(
+        422,
+        'VALIDATION_ERROR',
+        'Cannot shrink trip dates: one or more stops fall outside the new date range. Remove or adjust those stops first.'
+      );
+    }
   }
 
   const updateData: Prisma.TripUpdateInput = {};
@@ -136,6 +193,8 @@ export async function updateTrip(tripId: string, userId: string, data: UpdateTri
 
 export async function deleteTrip(tripId: string, userId: string): Promise<void> {
   await verifyTripOwnership(tripId, userId);
+  // Cascade delete via Prisma (schema has onDelete: Cascade on all child
+  // relations so stops → activities are automatically purged).
   await prisma.trip.delete({ where: { id: tripId } });
 }
 
@@ -153,6 +212,46 @@ export async function toggleShare(tripId: string, userId: string) {
     is_public: updated.is_public,
     share_url,
     share_token: updated.share_token,
+  };
+}
+
+export async function getTripStats(tripId: string, userId: string) {
+  const trip = await prisma.trip.findFirst({
+    where: { id: tripId, user_id: userId },
+    include: {
+      stops: {
+        include: {
+          activities: {
+            include: { activity: true },
+          },
+        },
+      },
+      expenses: true,
+    },
+  });
+
+  if (!trip) throw new AppError(404, 'NOT_FOUND', 'Trip not found');
+
+  const totalStops = trip.stops.length;
+  const totalActivities = trip.stops.reduce((sum, s) => sum + s.activities.length, 0);
+  const totalExpenses = trip.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const totalBudget = trip.total_budget ? Number(trip.total_budget) : null;
+  const remainingBudget = totalBudget !== null ? totalBudget - totalExpenses : null;
+
+  let dayCount = 0;
+  if (trip.start_date && trip.end_date) {
+    const start = new Date(trip.start_date);
+    const end = new Date(trip.end_date);
+    dayCount = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  }
+
+  return {
+    totalStops,
+    totalActivities,
+    totalExpenses: Math.round(totalExpenses * 100) / 100,
+    remainingBudget: remainingBudget !== null ? Math.round(remainingBudget * 100) / 100 : null,
+    dayCount,
   };
 }
 
@@ -188,29 +287,30 @@ export async function calculateBudget(tripId: string, userId: string) {
       1,
       Math.ceil((departureDate.getTime() - arrivalDate.getTime()) / (1000 * 60 * 60 * 24))
     );
-    const costIndex = Number(stop.city.cost_index);
+    const costIndex = stop.city ? Number(stop.city.cost_index) : 1.0;
 
     let stopActivitiesCost = 0;
     for (const sa of stop.activities) {
-      const cost = sa.custom_cost !== null ? Number(sa.custom_cost) : Number(sa.activity.cost);
+      const cost = sa.custom_cost !== null ? Number(sa.custom_cost) : (sa.activity ? Number(sa.activity.cost) : 0);
       stopActivitiesCost += cost;
     }
     activitiesCost += stopActivitiesCost;
 
-    const accom = costIndex * 0.45 * nights;
+    // FIX (Magic Numbers): Use centralised BUDGET constants
+    const accom = costIndex * BUDGET.ACCOMMODATION_RATE * nights;
     accommodationEstimate += accom;
 
-    const meals = costIndex * 0.3 * nights;
+    const meals = costIndex * BUDGET.MEALS_RATE * nights;
     mealsEstimate += meals;
 
     return {
-      city: stop.city.name,
+      city: stop.city ? stop.city.name : (stop.custom_city_name || 'Custom Stop'),
       nights,
       cost: Math.round((stopActivitiesCost + accom + meals) * 100) / 100,
     };
   });
 
-  const transportEstimate = Math.max(0, trip.stops.length - 1) * 80;
+  const transportEstimate = Math.max(0, trip.stops.length - 1) * BUDGET.TRANSPORT_PER_LEG_USD;
 
   const totalEstimated =
     Math.round((activitiesCost + accommodationEstimate + mealsEstimate + transportEstimate) * 100) /
@@ -219,12 +319,12 @@ export async function calculateBudget(tripId: string, userId: string) {
   const remaining =
     totalBudget !== null ? Math.round((totalBudget - totalEstimated) * 100) / 100 : null;
 
-  const tripStart = new Date(trip.start_date);
-  const tripEnd = new Date(trip.end_date);
-  const tripDays = Math.max(
-    1,
-    Math.ceil((tripEnd.getTime() - tripStart.getTime()) / (1000 * 60 * 60 * 24))
-  );
+  const tripStart = trip.start_date ? new Date(trip.start_date) : null;
+  const tripEnd = trip.end_date ? new Date(trip.end_date) : null;
+  const tripDays =
+    tripStart && tripEnd
+      ? Math.max(1, Math.ceil((tripEnd.getTime() - tripStart.getTime()) / (1000 * 60 * 60 * 24)))
+      : 1;
   const dailyAvg = Math.round((totalEstimated / tripDays) * 100) / 100;
 
   return {

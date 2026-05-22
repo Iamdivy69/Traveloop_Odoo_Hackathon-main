@@ -91,7 +91,7 @@ export default function ItineraryView() {
 
         {/* Actions */}
         <div className="flex items-center gap-2 p-4 border-t border-[#f1f5f9]">
-          <button onClick={() => navigate('/itinerary/build')} className="btn-ghost text-sm">
+          <button onClick={() => navigate(`/itinerary/build/${activeTrip.id}`)} className="btn-ghost text-sm">
             <Edit3 className="w-3.5 h-3.5" /> Edit
           </button>
           <button className="btn-ghost text-sm">
@@ -144,7 +144,7 @@ export default function ItineraryView() {
                 <div className="card p-12 text-center bg-[#f8fafc] border-dashed border-2 border-[#e2e8f0]">
                   <Calendar className="w-10 h-10 text-[#94a3b8] mx-auto mb-3" />
                   <p className="text-[#64748B] text-sm font-medium">No sections added to this itinerary yet.</p>
-                  <button onClick={() => navigate('/itinerary/build')} className="btn-primary mt-4 py-2 text-xs">
+                  <button onClick={() => navigate(`/itinerary/build/${activeTrip.id}`)} className="btn-primary mt-4 py-2 text-xs">
                     Start Building
                   </button>
                 </div>

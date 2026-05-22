@@ -6,8 +6,8 @@ import type { TripListQuery } from '../schemas/trip.schema';
 export async function listTrips(req: Request, res: Response, next: NextFunction) {
   try {
     const q = req.query as unknown as TripListQuery;
-    const trips = await tripService.listTrips(req.user!.id, q);
-    res.json({ success: true, data: trips });
+    const result = await tripService.listTrips(req.user!.id, q);
+    res.json({ success: true, data: result });
   } catch (err) {
     next(err);
   }
@@ -62,6 +62,15 @@ export async function getBudget(req: Request, res: Response, next: NextFunction)
   try {
     const budget = await tripService.calculateBudget(p(req, 'id'), req.user!.id);
     res.json({ success: true, data: budget });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getTripStats(req: Request, res: Response, next: NextFunction) {
+  try {
+    const stats = await tripService.getTripStats(p(req, 'id'), req.user!.id);
+    res.json({ success: true, data: stats });
   } catch (err) {
     next(err);
   }

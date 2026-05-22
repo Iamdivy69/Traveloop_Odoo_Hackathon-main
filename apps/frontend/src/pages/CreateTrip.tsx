@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../store/useStore';
-import { useAuthStore } from '../store/authStore';
+import { useCreateTrip } from '../hooks/useTrips';
 import { destinations } from '../data/destinations';
 import Select from 'react-select';
 import { Country, City } from 'country-state-city';
@@ -58,8 +57,8 @@ const customSelectStyles = {
 
 export default function CreateTrip() {
   const navigate = useNavigate();
-  const createTrip = useStore((s) => s.createTrip);
-  const authUser = useAuthStore((s) => s.user);
+  const createTripMutation = useCreateTrip();
+
   const [form, setForm] = useState({
     name: '',
     destination: '',
@@ -133,27 +132,24 @@ export default function CreateTrip() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.name || !form.destination || !form.startDate || !form.endDate) return;
     
     try {
       const dest = destinations.find((d) => form.destination.includes(d.name));
-      createTrip({
-        name: form.name,
-        destination: form.destination,
-        startDate: form.startDate,
-        endDate: form.endDate,
-        description: form.description,
-        coverImage: form.coverImage || dest?.image || '/images/dest-paris.jpg',
-        status: 'upcoming',
-        budget: 5000,
-        spent: 0,
-        createdBy: authUser ? `${authUser.first_name} ${authUser.last_name}` : 'James Wilson',
+      await createTripMutation.mutateAsync({
+        name: form.name.trim(),
+        description: form.description.trim() || undefined,
+        start_date: form.startDate,
+        end_date: form.endDate,
+        cover_photo_url: form.coverImage || dest?.image || '/images/dest-paris.jpg',
+        is_public: false,
+        total_budget: 0,
       });
       navigate('/trips');
     } catch (error) {
       console.error('Failed to create trip:', error);
-      alert('Failed to save trip. Your browser storage might be full. Try removing some old trips or using a smaller image.');
+      alert('Failed to save trip. Please check your connection and try again.');
     }
   };
 
@@ -414,9 +410,9 @@ export default function CreateTrip() {
                     <ArrowLeft className="w-4 h-4" />
                     Back
                   </button>
-                  <button onClick={handleSubmit} className="btn-primary">
+                  <button onClick={handleSubmit} disabled={createTripMutation.isPending} className="btn-primary disabled:opacity-50">
                     <Plus className="w-4 h-4" />
-                    Create Trip
+                    {createTripMutation.isPending ? 'Creating...' : 'Create Trip'}
                   </button>
                 </div>
               </div>

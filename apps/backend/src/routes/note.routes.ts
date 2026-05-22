@@ -1,15 +1,18 @@
 import { Router } from 'express';
 import * as noteController from '../controllers/note.controller';
 import { authenticate } from '../middleware/authenticate';
+import { validate } from '../middleware/validate';
+import { createNoteSchema, updateNoteSchema } from '../schemas/note.schema';
 
 const router = Router({ mergeParams: true });
 
 router.use(authenticate);
 
 router.get('/', noteController.getNotes);
-router.post('/', noteController.createNote);
+router.post('/', validate(createNoteSchema), noteController.createNote);
 router.get('/:noteId', noteController.getNote);
-router.patch('/:noteId', noteController.updateNote);
+router.put('/:noteId', validate(updateNoteSchema), noteController.updateNote);
+router.patch('/:noteId', validate(updateNoteSchema), noteController.updateNote);
 router.delete('/:noteId', noteController.deleteNote);
 
 export default router;

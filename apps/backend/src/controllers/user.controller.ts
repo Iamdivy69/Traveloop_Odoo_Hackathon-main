@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as userService from '../services/user.service';
+import { p } from '../utils/params';
+
 
 export async function getProfile(req: Request, res: Response, next: NextFunction) {
   try {
@@ -49,3 +51,33 @@ export async function deleteAccount(req: Request, res: Response, next: NextFunct
     next(err);
   }
 }
+
+export async function checkUsername(req: Request, res: Response, next: NextFunction) {
+  try {
+    const username = String(req.query.username || '');
+    const result = await userService.checkUsername(username);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateUsername(req: Request, res: Response, next: NextFunction) {
+  try {
+    const user = await userService.updateUsername(req.user!.id, req.body.username);
+    res.json({ success: true, data: user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getPublicProfile(req: Request, res: Response, next: NextFunction) {
+  try {
+    const username = p(req, 'username');
+    const profile = await userService.getPublicProfile(username);
+    res.json({ success: true, data: profile });
+  } catch (err) {
+    next(err);
+  }
+}
+

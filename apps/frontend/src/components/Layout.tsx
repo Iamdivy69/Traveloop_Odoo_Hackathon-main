@@ -1,8 +1,8 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import Sidebar from './Sidebar';
+import NotificationBell from './NotificationBell';
 import { useEffect, useState, useCallback } from 'react';
-import { Bell } from 'lucide-react';
 
 export default function Layout() {
   const location = useLocation();
@@ -85,10 +85,7 @@ export default function Layout() {
 
       {/* ── Top header bar (desktop) ── */}
       <header className="hidden md:flex fixed top-0 right-0 h-16 items-center justify-end gap-3 px-8 bg-[#F8FAFC]/80 backdrop-blur-md z-30" style={{ left: `${sidebarWidth}px` }}>
-        <button className="w-9 h-9 rounded-xl bg-white border border-[#e2e8f0] flex items-center justify-center text-[#64748B] hover:bg-[#f1f5f9] transition-colors relative">
-          <Bell className="w-[18px] h-[18px]" />
-          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#E8604C] rounded-full" />
-        </button>
+        <NotificationBell />
         <button onClick={() => navigate('/profile')} className="w-8 h-8 rounded-full overflow-hidden border-2 border-[#e2e8f0] hover:border-[#E8604C] transition-colors">
           <img src={user?.photo_url || '/images/user-avatar.jpg'} alt="Profile" className="w-full h-full object-cover" />
         </button>

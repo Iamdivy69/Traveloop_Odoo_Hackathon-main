@@ -15,15 +15,8 @@ export type AuthUserResponse = {
   first_name: string;
   last_name: string;
   is_admin: boolean;
+  name: string;
 };
-
-function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new AppError(500, 'CONFIG_ERROR', 'JWT_SECRET is not configured');
-  }
-  return secret;
-}
 
 function toAuthUserResponse(user: {
   id: string;
@@ -38,13 +31,22 @@ function toAuthUserResponse(user: {
     first_name: user.first_name,
     last_name: user.last_name,
     is_admin: user.is_admin,
+    name: `${user.first_name} ${user.last_name}`.trim(),
   };
 }
 
-function signToken(user: { id: string; email: string; is_admin: boolean }): string {
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new AppError(500, 'CONFIG_ERROR', 'JWT_SECRET is not configured');
+  }
+  return secret;
+}
+
+function signToken(user: { id: string; email: string; is_admin: boolean; token_version: number }): string {
   const secret = getJwtSecret();
   return jwt.sign(
-    { sub: user.id, email: user.email, is_admin: user.is_admin },
+    { sub: user.id, email: user.email, is_admin: user.is_admin, token_version: user.token_version },
     secret,
     { expiresIn: '7d' }
   );
@@ -92,8 +94,12 @@ export async function login(
   data: LoginInput
 ): Promise<{ token: string; user: AuthUserResponse }> {
   const user = await prisma.user.findUnique({ where: { email: data.email } });
-  if (!user) {
+  if (!user || user.deleted_at !== null) {
     throw new AppError(401, 'UNAUTHORIZED', 'Invalid email or password');
+  }
+
+  if (user.is_suspended) {
+    throw new AppError(403, 'ACCOUNT_SUSPENDED', 'Your account has been suspended');
   }
 
   const valid = await bcrypt.compare(data.password, user.password_hash);
@@ -107,8 +113,17 @@ export async function login(
 
 export async function getMe(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
+  if (!user || user.deleted_at !== null) {
     throw new AppError(404, 'NOT_FOUND', 'User not found');
   }
-  return stripPassword(user);
+  if (user.is_suspended) {
+    throw new AppError(403, 'ACCOUNT_SUSPENDED', 'Your account has been suspended');
+  }
+  const stripped = stripPassword(user);
+  return {
+    ...stripped,
+    name: `${user.first_name} ${user.last_name}`.trim(),
+    isPublic: user.is_public,
+    preferredCurrency: user.preferred_currency,
+  };
 }

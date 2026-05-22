@@ -249,7 +249,6 @@ export default function Register() {
               <Select
                 inputId="country-select"
                 name="country"
-                autoComplete="new-password"
                 options={countryOptions}
                 value={selectedCountry}
                 onChange={(option) => {
@@ -269,7 +268,6 @@ export default function Register() {
               <Select
                 inputId="city-select"
                 name="city"
-                autoComplete="new-password"
                 options={cityOptions}
                 value={selectedCity}
                 onChange={(option) => {
