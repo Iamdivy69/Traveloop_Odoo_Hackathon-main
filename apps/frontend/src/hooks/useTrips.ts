@@ -97,6 +97,8 @@ export function useTrips(filters: TripFilters = {}) {
   });
 }
 
+const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
 export function useTrip(id: string) {
   return useQuery<TripDetail>({
     queryKey: ['trip', id],
@@ -104,7 +106,7 @@ export function useTrip(id: string) {
       const { data } = await api.get(`/trips/${id}`);
       return data.data;
     },
-    enabled: !!id,
+    enabled: !!id && isUuid(id),
   });
 }
 
@@ -115,7 +117,7 @@ export function useTripStats(id: string) {
       const { data } = await api.get(`/trips/${id}/stats`);
       return data.data;
     },
-    enabled: !!id,
+    enabled: !!id && isUuid(id),
   });
 }
 

@@ -58,20 +58,20 @@ function NoteEditor({ open, onClose, tripId, existing, stops }: NoteEditorProps)
   return (
     <AnimatePresence>
       {open && (
-        <>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-2xl shadow-2xl z-50 overflow-hidden"
+            className="relative z-10 w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <h3 className="font-bold text-[#0b1c30] font-heading text-lg">
@@ -99,15 +99,37 @@ function NoteEditor({ open, onClose, tripId, existing, stops }: NoteEditorProps)
               {!isEdit && (
                 <div>
                   <label className="block text-xs font-bold text-[#0b1c30] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                    <Image className="w-3.5 h-3.5" /> Image URL (optional)
+                    <Image className="w-3.5 h-3.5" /> Image (optional)
                   </label>
                   <input
-                    type="url"
-                    placeholder="https://..."
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="w-full text-sm px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E8604C]/20 transition-all"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setImageUrl(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      } else {
+                        setImageUrl('');
+                      }
+                    }}
+                    className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E8604C]/20 transition-all file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#E8604C]/10 file:text-[#E8604C] hover:file:bg-[#E8604C]/20"
                   />
+                  {imageUrl && (
+                    <div className="mt-3 h-32 rounded-xl overflow-hidden border border-slate-200 relative group">
+                      <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setImageUrl('')}
+                        className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -143,7 +165,7 @@ function NoteEditor({ open, onClose, tripId, existing, stops }: NoteEditorProps)
               </div>
             </form>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );
@@ -160,20 +182,20 @@ function NoteView({ note, onClose, onEdit }: NoteViewProps) {
   return (
     <AnimatePresence>
       {note && (
-        <>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl bg-white rounded-2xl shadow-2xl z-50 overflow-hidden max-h-[80vh] flex flex-col"
+            className="relative z-10 w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
@@ -197,13 +219,75 @@ function NoteView({ note, onClose, onEdit }: NoteViewProps) {
               {note.stop && (
                 <div className="flex items-center gap-2 text-sm text-[#E8604C] font-semibold">
                   <MapPin className="w-4 h-4" />
-                  {note.stop.city.name}, {note.stop.city.country}
+                  {note.stop.city ? `${note.stop.city.name}, ${note.stop.city.country}` : note.stop.custom_city_name || 'Custom Stop'}
                 </div>
               )}
               <p className="text-[#0b1c30] text-base leading-relaxed whitespace-pre-wrap">{note.content}</p>
+              {note.image_url && (
+                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                  <img src={note.image_url} alt="Note attachment" className="w-full h-auto object-contain max-h-[60vh]" />
+                </div>
+              )}
             </div>
           </motion.div>
-        </>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─── Delete Confirmation Modal ────────────────────────────────────────────────
+interface DeleteConfirmModalProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}
+
+function DeleteConfirmModal({ open, onClose, onConfirm, isPending }: DeleteConfirmModalProps) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+            className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 text-center"
+          >
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="font-heading font-bold text-lg text-[#0b1c30] mb-2">Delete Note?</h3>
+            <p className="text-slate-500 text-sm mb-6">
+              Are you sure you want to delete this note? This action cannot be undone.
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={onClose}
+                disabled={isPending}
+                className="px-5 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-50 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onConfirm}
+                disabled={isPending}
+                className="px-5 py-2.5 text-sm font-semibold bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors flex items-center justify-center min-w-[100px]"
+              >
+                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );
@@ -219,6 +303,7 @@ export default function TripNotes() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<TripNote | undefined>(undefined);
   const [viewingNote, setViewingNote] = useState<TripNote | null>(null);
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
 
   const { data: notes, isLoading } = useNotes(tripId, filterStopId || undefined);
   const { data: tripStops } = useStops(tripId);
@@ -336,7 +421,7 @@ export default function TripNotes() {
                 {note.stop && (
                   <div className="flex items-center gap-1.5 text-xs text-[#E8604C] font-bold mb-2.5">
                     <MapPin className="w-3.5 h-3.5" />
-                    {note.stop.city.name}
+                    {note.stop.city ? note.stop.city.name : note.stop.custom_city_name || 'Custom Stop'}
                   </div>
                 )}
 
@@ -344,6 +429,13 @@ export default function TripNotes() {
                 <p className="text-sm text-[#0b1c30] leading-relaxed line-clamp-6">
                   {note.content}
                 </p>
+
+                {/* Image preview */}
+                {note.image_url && (
+                  <div className="mt-3 rounded-lg overflow-hidden border border-slate-100 max-h-48">
+                    <img src={note.image_url} alt="Note attachment" className="w-full h-full object-cover" />
+                  </div>
+                )}
 
                 {/* Footer */}
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
@@ -361,7 +453,7 @@ export default function TripNotes() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm('Delete this note?')) deleteNote.mutate(note.id);
+                        setNoteToDelete(note.id);
                       }}
                       disabled={deleteNote.isPending}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
@@ -411,6 +503,18 @@ export default function TripNotes() {
         note={viewingNote}
         onClose={() => setViewingNote(null)}
         onEdit={handleEditNote}
+      />
+      <DeleteConfirmModal
+        open={!!noteToDelete}
+        onClose={() => setNoteToDelete(null)}
+        onConfirm={() => {
+          if (noteToDelete) {
+            deleteNote.mutate(noteToDelete, {
+              onSuccess: () => setNoteToDelete(null)
+            });
+          }
+        }}
+        isPending={deleteNote.isPending}
       />
     </div>
   );

@@ -76,14 +76,16 @@ export default function ExpenseCard({ expense, currency, tripId }: ExpenseCardPr
             {expense.category}
           </span>
         </div>
-        <button
-          onClick={() => deleteExpense.mutate(expense.id)}
-          disabled={deleteExpense.isPending}
-          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50"
-          title="Delete Expense"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        {!expense.is_virtual && (
+          <button
+            onClick={() => deleteExpense.mutate(expense.id)}
+            disabled={deleteExpense.isPending}
+            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50"
+            title="Delete Expense"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </div>
   );

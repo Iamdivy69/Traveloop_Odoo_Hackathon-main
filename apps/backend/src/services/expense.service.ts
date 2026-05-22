@@ -4,7 +4,7 @@ import { AppError } from '../middleware/errorHandler';
 import type { CreateExpenseInput, UpdateExpenseInput } from '../schemas/expense.schema';
 
 export async function getExpenses(tripId: string) {
-  return await prisma.expense.findMany({
+  const expenses = await prisma.expense.findMany({
     where: { trip_id: tripId },
     include: {
       paid_by: {
@@ -20,6 +20,40 @@ export async function getExpenses(tripId: string) {
     },
     orderBy: { created_at: 'desc' },
   });
+
+  const stops = await prisma.tripStop.findMany({
+    where: { trip_id: tripId },
+    include: { activities: { include: { activity: true } } }
+  });
+
+  const virtualExpenses = stops.flatMap(stop => stop.activities.map(sa => {
+    const cost = sa.custom_cost !== null ? Number(sa.custom_cost) : (sa.activity ? Number(sa.activity.cost) : 0);
+    if (cost <= 0) return null;
+    return {
+      id: sa.id,
+      trip_id: tripId,
+      title: sa.custom_title || sa.activity?.name || 'Activity',
+      amount: cost,
+      currency: 'INR',
+      category: 'ACTIVITY',
+      created_at: sa.scheduled_time || stop.arrival_date,
+      updated_at: sa.scheduled_time || stop.arrival_date,
+      paid_by_id: 'virtual',
+      is_virtual: true,
+      paid_by: {
+        id: 'virtual',
+        first_name: 'Trip',
+        last_name: 'Itinerary',
+        photo_url: null,
+      },
+      splits: [],
+    };
+  })).filter(Boolean);
+
+  const combined = [...expenses, ...virtualExpenses];
+  combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  
+  return combined;
 }
 
 export async function createExpense(
@@ -192,6 +226,27 @@ export async function getSummary(tripId: string) {
     for (const u of users) {
       if (personMap[u.id]) {
         personMap[u.id].name = `${u.first_name} ${u.last_name}`;
+      }
+    }
+  }
+
+  const stops = await prisma.tripStop.findMany({
+    where: { trip_id: tripId },
+    include: { activities: { include: { activity: true } } }
+  });
+
+  for (const stop of stops) {
+    for (const sa of stop.activities) {
+      const cost = sa.custom_cost !== null ? Number(sa.custom_cost) : (sa.activity ? Number(sa.activity.cost) : 0);
+      if (cost > 0) {
+        const amtCents = Math.round(cost * 100);
+        totalSpentCents += amtCents;
+        
+        if (!categoryMap['ACTIVITY']) {
+          categoryMap['ACTIVITY'] = { totalCents: 0, count: 0 };
+        }
+        categoryMap['ACTIVITY'].totalCents += amtCents;
+        categoryMap['ACTIVITY'].count += 1;
       }
     }
   }

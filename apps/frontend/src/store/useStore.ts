@@ -348,8 +348,8 @@ export const useStore = create<AppState>()(
 
       // Notes
       addNote: (tripId, note) => {
-        const newNote: Note = { 
-          ...note, 
+        const newNote: Note = {
+          ...note,
           id: Date.now().toString(),
           updatedAt: new Date().toISOString()
         };
@@ -367,8 +367,8 @@ export const useStore = create<AppState>()(
         const updatedAt = new Date().toISOString();
         set({
           trips: get().trips.map((t) =>
-            t.id === tripId 
-              ? { ...t, notes: t.notes.map(n => n.id === noteId ? { ...n, ...data, updatedAt } : n) } 
+            t.id === tripId
+              ? { ...t, notes: t.notes.map(n => n.id === noteId ? { ...n, ...data, updatedAt } : n) }
               : t
           ),
           activeTrip: get().activeTrip?.id === tripId
@@ -391,14 +391,14 @@ export const useStore = create<AppState>()(
       archiveNote: (tripId, noteId) => {
         const { trips, activeTrip } = get();
         const updatedAt = new Date().toISOString();
-        const updatedTrips = trips.map(t => 
-          t.id === tripId 
+        const updatedTrips = trips.map(t =>
+          t.id === tripId
             ? { ...t, notes: t.notes.map(n => n.id === noteId ? { ...n, archived: !n.archived, updatedAt } : n) }
             : t
         );
         set({
           trips: updatedTrips,
-          activeTrip: activeTrip?.id === tripId 
+          activeTrip: activeTrip?.id === tripId
             ? updatedTrips.find(t => t.id === tripId) || null
             : activeTrip
         });
@@ -407,14 +407,14 @@ export const useStore = create<AppState>()(
       pinNote: (tripId, noteId) => {
         const { trips, activeTrip } = get();
         const updatedAt = new Date().toISOString();
-        const updatedTrips = trips.map(t => 
-          t.id === tripId 
+        const updatedTrips = trips.map(t =>
+          t.id === tripId
             ? { ...t, notes: t.notes.map(n => n.id === noteId ? { ...n, pinned: !n.pinned, updatedAt } : n) }
             : t
         );
         set({
           trips: updatedTrips,
-          activeTrip: activeTrip?.id === tripId 
+          activeTrip: activeTrip?.id === tripId
             ? updatedTrips.find(t => t.id === tripId) || null
             : activeTrip
         });
@@ -434,13 +434,13 @@ export const useStore = create<AppState>()(
           updatedAt: new Date().toISOString()
         };
 
-        const updatedTrips = trips.map(t => 
+        const updatedTrips = trips.map(t =>
           t.id === tripId ? { ...t, notes: [newNote, ...t.notes] } : t
         );
 
         set({
           trips: updatedTrips,
-          activeTrip: activeTrip?.id === tripId 
+          activeTrip: activeTrip?.id === tripId
             ? updatedTrips.find(t => t.id === tripId) || null
             : activeTrip
         });
@@ -452,6 +452,7 @@ export const useStore = create<AppState>()(
         user: state.user,
         isLoggedIn: state.isLoggedIn,
         trips: state.trips,
+        activeTrip: state.activeTrip,
         checklist: state.checklist,
         communityPosts: state.communityPosts,
       }),

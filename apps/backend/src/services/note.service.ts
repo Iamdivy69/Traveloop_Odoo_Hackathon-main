@@ -2,6 +2,7 @@ import prisma from '../db/prisma';
 import { AppError } from '../middleware/errorHandler';
 
 function isValidUrl(url: string) {
+  if (url.startsWith('data:image/')) return true;
   try {
     new URL(url);
     return true;
@@ -56,6 +57,7 @@ export async function createNote(
       trip_id: tripId,
       stop_id: data.stop_id || null,
       content: data.content,
+      image_url: data.image_url || null,
     },
     include: { stop: { include: { city: true } } },
   });
@@ -98,6 +100,7 @@ export async function updateNote(
     data: {
       ...(data.content !== undefined && { content: data.content }),
       ...(data.stop_id !== undefined && { stop_id: data.stop_id }),
+      ...(data.image_url !== undefined && { image_url: data.image_url }),
     },
     include: { stop: { include: { city: true } } },
   });

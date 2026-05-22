@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
+import { useTrip, useTripStats } from '../hooks/useTrips';
+import PageLoader from '../components/ui/PageLoader';
 import {
   MapPin,
   Calendar,
@@ -15,17 +17,53 @@ import {
 
 const COLORS = ['#001b26', '#E8604C', '#059669', '#d97706', '#6366f1', '#94a3b8'];
 
+function formatDate(dateStr?: string | null) {
+  if (!dateStr) return 'TBD';
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export default function ItineraryView() {
   const navigate = useNavigate();
   const { trips, activeTrip, setActiveTrip } = useStore();
 
-  const remaining = activeTrip ? activeTrip.budget - activeTrip.spent : 0;
-  const budgetData = activeTrip?.sections ? activeTrip.sections.map((s: any, i: number) => ({
+  const { data: tripDetail, isLoading: detailLoading } = useTrip(activeTrip?.id || '');
+  const { data: tripStats, isLoading: statsLoading } = useTripStats(activeTrip?.id || '');
+
+  if (activeTrip && (detailLoading || statsLoading)) {
+    return <PageLoader />;
+  }
+
+  const budget = activeTrip?.total_budget ? Number(activeTrip.total_budget) : 0;
+  const spent = tripStats?.totalExpenses || 0;
+  const remaining = budget - spent;
+
+  const sections = tripDetail?.stops?.map((stop) => {
+    const cost = stop.activities?.reduce((sum, sa) => {
+      const saCost = sa.custom_cost !== null ? Number(sa.custom_cost) : (sa.activity ? Number(sa.activity.cost) : 0);
+      return sum + saCost;
+    }, 0) || 0;
+
+    return {
+      id: stop.id,
+      title: stop.city?.name || stop.custom_city_name || 'Stop',
+      budget: cost,
+      description: `${stop.activities?.length || 0} activities planned`,
+      dateRange: `${formatDate(stop.arrival_date)} - ${formatDate(stop.departure_date)}`,
+    };
+  }) || [];
+
+  const budgetData = sections.length > 0 ? sections.map((s: any, i: number) => ({
     name: s.title,
     value: s.budget,
     color: COLORS[i % COLORS.length],
-    percent: Math.round((s.budget / activeTrip.budget) * 100),
+    percent: budget > 0 ? Math.round((s.budget / budget) * 100) : 0,
   })) : [];
+
+  const destination = tripDetail?.stops?.[0]?.city?.name || tripDetail?.stops?.[0]?.custom_city_name || 'Multiple Destinations';
+  const startDate = formatDate(activeTrip?.start_date);
+  const endDate = formatDate(activeTrip?.end_date);
+  const coverImage = activeTrip?.cover_photo_url || '';
+  const status = 'upcoming'; // Basic fallback, we can use TripStatusBadge logic if needed
 
   return (
     <div className="page-transition">
@@ -68,23 +106,27 @@ export default function ItineraryView() {
         <>
           <div className="card overflow-hidden mb-8 group">
             <div className="relative h-48 sm:h-72">
-              <img src={activeTrip.coverImage} alt={activeTrip.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              {coverImage ? (
+                <img src={coverImage} alt={activeTrip.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[#001b26] to-[#0d313f]" />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-[#001b26] via-[#001b26]/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-8">
                 <div className="flex items-center gap-2 mb-3">
                   <span className={`badge px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                    activeTrip.status === 'ongoing' ? 'bg-[#E8604C] text-white shadow-lg shadow-[#E8604C]/30' :
-                    activeTrip.status === 'upcoming' ? 'bg-[#059669] text-white shadow-lg shadow-[#059669]/20' : 'bg-white/20 text-white backdrop-blur-md'
+                    status === 'ongoing' ? 'bg-[#E8604C] text-white shadow-lg shadow-[#E8604C]/30' :
+                    status === 'upcoming' ? 'bg-[#059669] text-white shadow-lg shadow-[#059669]/20' : 'bg-white/20 text-white backdrop-blur-md'
                   }`}>
                     <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse mr-1.5 inline-block" />
-                    {activeTrip.status}
+                    {status}
                   </span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-bold text-white font-heading tracking-tight mb-3">{activeTrip.name}</h2>
             <div className="flex flex-wrap items-center gap-4 mt-2 text-white/70 text-sm">
-              <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{activeTrip.destination}</span>
-              <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{activeTrip.startDate} - {activeTrip.endDate}</span>
-              <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" />₹{activeTrip.budget.toLocaleString()} budget</span>
+              <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{destination}</span>
+              <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{startDate} - {endDate}</span>
+              <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" />₹{budget.toLocaleString()} budget</span>
             </div>
           </div>
         </div>
@@ -115,7 +157,7 @@ export default function ItineraryView() {
             <div className="absolute left-5 top-4 bottom-4 w-0.5 bg-[#e2e8f0]" />
             
             <div className="space-y-4">
-              {(activeTrip.sections || []).map((section: any, index: number) => (
+              {sections.map((section: any, index: number) => (
                 <div key={section.id} className="relative flex gap-4">
                   {/* Timeline dot */}
                   <div className="relative z-10 flex-shrink-0">
@@ -140,7 +182,7 @@ export default function ItineraryView() {
                   </div>
                 </div>
               ))}
-              {(!activeTrip.sections || activeTrip.sections.length === 0) && (
+              {sections.length === 0 && (
                 <div className="card p-12 text-center bg-[#f8fafc] border-dashed border-2 border-[#e2e8f0]">
                   <Calendar className="w-10 h-10 text-[#94a3b8] mx-auto mb-3" />
                   <p className="text-[#64748B] text-sm font-medium">No sections added to this itinerary yet.</p>
@@ -153,18 +195,16 @@ export default function ItineraryView() {
           </div>
 
           {/* Notes */}
-          {activeTrip.notes?.length > 0 && (
+          {tripDetail?.notes && (tripDetail.notes as any[]).length > 0 && (
             <div className="mt-8">
               <h2 className="text-xl font-bold text-[#0b1c30] font-heading mb-4">Trip Notes</h2>
               <div className="space-y-3">
-                {activeTrip.notes.map((note) => (
+                {(tripDetail.notes as any[]).map((note) => (
                   <div key={note.id} className="card p-4 border-l-4 border-l-[#E8604C]">
                     <div className="flex items-center gap-2 mb-1">
                       <StickyNote className="w-4 h-4 text-[#E8604C]" />
-                      <h4 className="font-semibold text-[#0b1c30] text-sm">{note.title}</h4>
+                      <h4 className="font-semibold text-[#0b1c30] text-sm">{note.content}</h4>
                     </div>
-                    <p className="text-sm text-[#64748B]">{note.content}</p>
-                    <p className="text-xs text-[#94a3b8] mt-2">{note.date} | {note.stop}</p>
                   </div>
                 ))}
               </div>
@@ -199,7 +239,7 @@ export default function ItineraryView() {
                   }, { elements: [] as React.ReactElement[], offset: 0 }).elements}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-lg font-bold text-[#0b1c30] font-heading">{activeTrip.sections?.length || 0}</span>
+                  <span className="text-lg font-bold text-[#0b1c30] font-heading">{sections.length}</span>
                   <span className="text-[10px] text-[#94a3b8]">Sections</span>
                 </div>
               </div>
@@ -223,11 +263,11 @@ export default function ItineraryView() {
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-[#64748B]">Total Budget</span>
-                <span className="font-semibold text-[#0b1c30]">₹{activeTrip.budget.toLocaleString()}</span>
+                <span className="font-semibold text-[#0b1c30]">₹{budget.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-[#64748B]">Total Spent</span>
-                <span className="font-semibold text-[#E8604C]">₹{activeTrip.spent.toLocaleString()}</span>
+                <span className="font-semibold text-[#E8604C]">₹{spent.toLocaleString()}</span>
               </div>
               <div className="border-t border-[#f1f5f9] pt-3 flex justify-between text-sm">
                 <span className="text-[#64748B]">Remaining</span>
@@ -239,11 +279,11 @@ export default function ItineraryView() {
                 <div className="h-2 bg-[#f1f5f9] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-[#001b26] rounded-full transition-all duration-700"
-                    style={{ width: `${Math.min((activeTrip.spent / activeTrip.budget) * 100, 100)}%` }}
+                    style={{ width: `${Math.min(budget > 0 ? (spent / budget) * 100 : 0, 100)}%` }}
                   />
                 </div>
                 <p className="text-xs text-[#94a3b8] mt-1">
-                  {Math.round((activeTrip.spent / activeTrip.budget) * 100)}% of budget used
+                  {budget > 0 ? Math.round((spent / budget) * 100) : 0}% of budget used
                 </p>
               </div>
             </div>

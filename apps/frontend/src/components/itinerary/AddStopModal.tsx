@@ -83,7 +83,7 @@ export default function AddStopModal({ tripId, isOpen, onClose }: AddStopModalPr
             exit={{ opacity: 0, scale: 0.92, y: 20 }}
             transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
           >
-            <div className="h-1.5 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6]" />
+            <div className="h-1.5 bg-[#3b82f6]" />
             <div className="p-6">
               <div className="flex items-start justify-between mb-5">
                 <div>

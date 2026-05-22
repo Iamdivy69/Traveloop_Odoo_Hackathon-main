@@ -52,7 +52,7 @@ function DiscoverCard({ user }: { user: { id: string; first_name: string; last_n
       {user.photo_url ? (
         <img src={user.photo_url} alt={user.first_name} className="w-9 h-9 rounded-full object-cover border border-slate-200 flex-shrink-0" />
       ) : (
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#E8604C] to-amber-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+        <div className="w-9 h-9 rounded-full bg-[#E8604C] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
           {initials}
         </div>
       )}
@@ -86,7 +86,7 @@ function RequestCard({ req }: { req: { id: string; requester: { first_name: stri
       {req.requester.photo_url ? (
         <img src={req.requester.photo_url} alt={req.requester.first_name} className="w-9 h-9 rounded-full object-cover border border-slate-200 flex-shrink-0" />
       ) : (
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+        <div className="w-9 h-9 rounded-full bg-slate-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
           {initials}
         </div>
       )}
@@ -174,7 +174,7 @@ export default function Community() {
             onClick={() => setCreateOpen(true)}
             className="w-full card p-4 flex items-center gap-3 hover:border-[#E8604C]/30 transition-colors cursor-pointer text-left"
           >
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E8604C] to-amber-400 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#E8604C] flex items-center justify-center flex-shrink-0">
               <MessageSquarePlus className="w-4 h-4 text-white" />
             </div>
             <span className="text-sm text-slate-400 flex-1">Share your travel experience...</span>
@@ -275,7 +275,7 @@ export default function Community() {
                       {friend.photo_url ? (
                         <img src={friend.photo_url} alt={friend.first_name} className="w-7 h-7 rounded-full object-cover border border-slate-200" />
                       ) : (
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#E8604C] to-amber-400 flex items-center justify-center text-white text-[10px] font-bold">
+                        <div className="w-7 h-7 rounded-full bg-[#E8604C] flex items-center justify-center text-white text-[10px] font-bold">
                           {initials}
                         </div>
                       )}

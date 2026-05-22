@@ -29,7 +29,7 @@ function Avatar({ user }: { user: CommunityPost['user'] }) {
     );
   }
   return (
-    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E8604C] to-[#d44f3c] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+    <div className="w-10 h-10 rounded-full bg-[#E8604C] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
       {initials}
     </div>
   );

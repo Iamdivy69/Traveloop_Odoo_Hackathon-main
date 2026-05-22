@@ -41,7 +41,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(sanitizeInput);
 
 // Response time header middleware

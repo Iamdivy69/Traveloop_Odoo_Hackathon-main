@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 
+const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
 export function usePackingList(tripId: string) {
   return useQuery({
     queryKey: ['packing', tripId],
@@ -9,7 +11,7 @@ export function usePackingList(tripId: string) {
       // data.data is Record<string, PackingItem[]>
       return data.data as Record<string, { id: string; name: string; category: string; is_packed: boolean; created_at: string }[]>;
     },
-    enabled: !!tripId,
+    enabled: !!tripId && isUuid(tripId),
   });
 }
 
@@ -20,7 +22,7 @@ export function usePackingProgress(tripId: string) {
       const { data } = await api.get(`/trips/${tripId}/packing/progress`);
       return data.data as { total: number; packed: number; percentage: number };
     },
-    enabled: !!tripId,
+    enabled: !!tripId && isUuid(tripId),
   });
 }
 

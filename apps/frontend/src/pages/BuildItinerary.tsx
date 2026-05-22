@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useStore } from '../store/useStore';
+import type { Trip as StoreTrip } from '../store/useStore';
 import {
   ArrowLeft, MapPin, Calendar, DollarSign, Clock, Plus, Trash2,
   ChevronDown, ChevronUp, ArrowUp, ArrowDown, Loader2, AlertTriangle,
@@ -33,6 +35,56 @@ interface ActivityPickerTarget {
   cityName: string;
 }
 
+function mapDbTripToStoreTrip(dbTrip: any, stats?: any): StoreTrip {
+  const destination = dbTrip.stops?.map((s: any) => s.city?.name || s.custom_city_name).filter(Boolean).join(', ') || dbTrip.description || '';
+  const startDate = dbTrip.start_date ? dbTrip.start_date.split('T')[0] : '';
+  const endDate = dbTrip.end_date ? dbTrip.end_date.split('T')[0] : '';
+  
+  const sections = dbTrip.stops?.map((s: any) => {
+    const nights = Math.max(0, Math.ceil((new Date(s.departure_date).getTime() - new Date(s.arrival_date).getTime()) / 86400000));
+    const budget = s.activities?.reduce((sum: number, sa: any) => {
+      const cost = sa.custom_cost != null ? Number(sa.custom_cost) : sa.activity ? Number(sa.activity.cost) : 0;
+      return sum + cost;
+    }, 0) || 0;
+    
+    const description = s.activities?.map((sa: any) => sa.custom_title || sa.activity?.title).filter(Boolean).join(', ') || 'No activities';
+    
+    return {
+      id: s.id,
+      title: s.city?.name || s.custom_city_name || 'Stop',
+      description,
+      dateRange: `${new Date(s.arrival_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} - ${new Date(s.departure_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} (${nights} night${nights !== 1 ? 's' : ''})`,
+      budget
+    };
+  }) || [];
+
+  return {
+    id: dbTrip.id,
+    name: dbTrip.name,
+    destination,
+    startDate,
+    endDate,
+    description: dbTrip.description || '',
+    coverImage: dbTrip.cover_photo_url || '/images/dest-paris.jpg',
+    status: dbTrip.start_date && dbTrip.end_date
+      ? (new Date() < new Date(dbTrip.start_date) ? 'upcoming' : new Date() > new Date(dbTrip.end_date) ? 'completed' : 'ongoing')
+      : 'upcoming',
+    budget: Number(dbTrip.total_budget || 0),
+    spent: stats?.totalExpenses || 0,
+    sections,
+    notes: dbTrip.notes?.map((n: any) => ({
+      id: n.id,
+      tripId: dbTrip.id,
+      title: n.title || 'Note',
+      content: n.content,
+      date: n.created_at ? n.created_at.split('T')[0] : '',
+      stop: n.stop?.city?.name || n.stop?.custom_city_name || '',
+      updatedAt: n.updated_at
+    })) || [],
+    createdBy: dbTrip.user_id || 'User'
+  };
+}
+
 export default function BuildItinerary() {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
@@ -40,6 +92,20 @@ export default function BuildItinerary() {
   const { data: trip, isLoading: tripLoading, isError: tripError } = useTrip(tripId!);
   const { data: stops = [], isLoading: stopsLoading } = useStops(tripId!);
   const { data: stats } = useTripStats(tripId!);
+
+  const setActiveTrip = useStore((state) => state.setActiveTrip);
+  const activeTrip = useStore((state) => state.activeTrip);
+
+  useEffect(() => {
+    if (trip) {
+      const mappedTrip = mapDbTripToStoreTrip(trip, stats);
+      const activeTripStr = activeTrip ? `${activeTrip.id}-${activeTrip.budget}-${activeTrip.spent}-${activeTrip.sections?.length}-${activeTrip.name}` : '';
+      const mappedTripStr = `${mappedTrip.id}-${mappedTrip.budget}-${mappedTrip.spent}-${mappedTrip.sections?.length}-${mappedTrip.name}`;
+      if (activeTripStr !== mappedTripStr) {
+        setActiveTrip(mappedTrip);
+      }
+    }
+  }, [trip, stats, setActiveTrip, activeTrip]);
 
   const deleteStop = useDeleteStop(tripId!);
   const reorderStops = useReorderStops(tripId!);
@@ -163,9 +229,8 @@ export default function BuildItinerary() {
                     {/* Budget bar */}
                     <div className="w-full h-2 bg-[#f1f5f9] rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${
-                          stats.remainingBudget >= 0 ? 'bg-[#059669]' : 'bg-[#E8604C]'
-                        }`}
+                        className={`h-full rounded-full transition-all ${stats.remainingBudget >= 0 ? 'bg-[#059669]' : 'bg-[#E8604C]'
+                          }`}
                         style={{
                           width: `${Math.min(100, (stats.totalExpenses / Number(trip.total_budget)) * 100)}%`,
                         }}
@@ -207,9 +272,8 @@ export default function BuildItinerary() {
             </motion.div>
           ) : (
             <div className="relative">
-              {/* Timeline line */}
               {sortedStops.length > 1 && (
-                <div className="absolute left-6 top-10 bottom-10 w-0.5 bg-gradient-to-b from-[#E8604C]/40 via-[#3b82f6]/30 to-[#8b5cf6]/40 z-0" />
+                <div className="absolute left-6 top-10 bottom-10 w-0.5 bg-[#e2e8f0] z-0" />
               )}
 
               <div className="space-y-4">
@@ -232,7 +296,7 @@ export default function BuildItinerary() {
                         className="relative z-10"
                       >
                         {/* Stop number bubble */}
-                        <div className="absolute left-0 top-5 w-12 h-12 rounded-full bg-gradient-to-br from-[#E8604C] to-[#f59e0b] flex items-center justify-center text-white font-bold text-sm shadow-md z-10">
+                        <div className="absolute left-0 top-5 w-12 h-12 rounded-full bg-[#E8604C] flex items-center justify-center text-white font-bold text-sm shadow-md z-10">
                           {index + 1}
                         </div>
 
@@ -369,7 +433,7 @@ export default function BuildItinerary() {
                 <motion.button
                   layout
                   onClick={() => setAddStopOpen(true)}
-                  className="ml-16 w-full py-4 border-2 border-dashed border-[#e2e8f0] rounded-2xl text-[#94a3b8] hover:border-[#E8604C] hover:text-[#E8604C] transition-all flex items-center justify-center gap-2 text-sm font-semibold"
+                  className="ml-16 w-[calc(100%-4rem)] py-4 border-2 border-dashed border-[#e2e8f0] rounded-2xl text-[#94a3b8] hover:border-[#E8604C] hover:text-[#E8604C] transition-all flex items-center justify-center gap-2 text-sm font-semibold"
                 >
                   <Plus className="w-4 h-4" /> Add Another Stop
                 </motion.button>

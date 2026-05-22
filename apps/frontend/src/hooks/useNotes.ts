@@ -8,13 +8,17 @@ export interface TripNote {
   content: string;
   created_at: string;
   updated_at: string;
+  image_url?: string;
   stop?: {
     id: string;
-    city: { name: string; country: string };
+    city?: { name: string; country: string } | null;
+    custom_city_name?: string | null;
     arrival_date: string;
     departure_date: string;
   } | null;
 }
+
+const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 
 export function useNotes(tripId: string, stopId?: string) {
   return useQuery({
@@ -24,7 +28,7 @@ export function useNotes(tripId: string, stopId?: string) {
       const { data } = await api.get(`/trips/${tripId}/notes`, { params });
       return data.data as TripNote[];
     },
-    enabled: !!tripId,
+    enabled: !!tripId && isUuid(tripId),
   });
 }
 

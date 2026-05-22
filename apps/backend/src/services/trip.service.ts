@@ -234,7 +234,15 @@ export async function getTripStats(tripId: string, userId: string) {
 
   const totalStops = trip.stops.length;
   const totalActivities = trip.stops.reduce((sum, s) => sum + s.activities.length, 0);
-  const totalExpenses = trip.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const activityCosts = trip.stops.reduce((sum, s) => {
+    return sum + s.activities.reduce((aSum, sa) => {
+      const cost = sa.custom_cost !== null ? Number(sa.custom_cost) : (sa.activity ? Number(sa.activity.cost) : 0);
+      return aSum + cost;
+    }, 0);
+  }, 0);
+
+  const totalExpenses = trip.expenses.reduce((sum, e) => sum + Number(e.amount), 0) + activityCosts;
 
   const totalBudget = trip.total_budget ? Number(trip.total_budget) : null;
   const remainingBudget = totalBudget !== null ? totalBudget - totalExpenses : null;

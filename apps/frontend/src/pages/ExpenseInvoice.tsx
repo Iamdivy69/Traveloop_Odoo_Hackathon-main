@@ -12,7 +12,7 @@ export default function ExpenseInvoice() {
   const navigate = useNavigate();
   const { activeTrip } = useStore();
   const { user } = useAuthStore();
-  
+
   const [view, setView] = useState<'EXPENSE' | 'INVOICE'>('EXPENSE');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -60,7 +60,7 @@ export default function ExpenseInvoice() {
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 print:hidden gap-4">
         <div>
           <button
-            onClick={() => navigate('/itinerary')}
+            onClick={() => navigate(`/itinerary/build/${tripId}`)}
             className="flex items-center gap-2 text-slate-500 hover:text-[#0b1c30] text-sm font-medium transition-colors mb-2"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -71,18 +71,16 @@ export default function ExpenseInvoice() {
         <div className="flex items-center gap-3 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
           <button
             onClick={() => setView('EXPENSE')}
-            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${
-              view === 'EXPENSE' ? 'bg-[#E8604C] text-white' : 'text-slate-500 hover:bg-slate-50'
-            }`}
+            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${view === 'EXPENSE' ? 'bg-[#E8604C] text-white' : 'text-slate-500 hover:bg-slate-50'
+              }`}
           >
             <Wallet className="w-4 h-4" />
             Expenses
           </button>
           <button
             onClick={() => setView('INVOICE')}
-            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${
-              view === 'INVOICE' ? 'bg-[#E8604C] text-white' : 'text-slate-500 hover:bg-slate-50'
-            }`}
+            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${view === 'INVOICE' ? 'bg-[#E8604C] text-white' : 'text-slate-500 hover:bg-slate-50'
+              }`}
           >
             <FileText className="w-4 h-4" />
             Invoice
@@ -116,9 +114,8 @@ export default function ExpenseInvoice() {
               </div>
               <div className="mt-4 w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${
-                    progressPercent > 90 ? 'bg-red-500' : 'bg-emerald-500'
-                  }`}
+                  className={`h-full rounded-full transition-all ${progressPercent > 90 ? 'bg-red-500' : 'bg-emerald-500'
+                    }`}
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -332,7 +329,7 @@ export default function ExpenseInvoice() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="mt-16 text-center text-xs text-slate-400">
                 <p>Thank you for using Traveloop to manage your journey.</p>
                 <p>This invoice is electronically generated and requires no physical signature.</p>

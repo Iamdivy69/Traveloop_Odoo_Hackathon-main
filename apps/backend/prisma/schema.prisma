@@ -149,6 +149,7 @@ model TripNote {
   trip_id    String    @db.Uuid
   stop_id    String?   @db.Uuid
   content    String
+  image_url  String?
   created_at DateTime  @default(now()) @db.Timestamptz(6)
   updated_at DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
   stop       TripStop? @relation(fields: [stop_id], references: [id], onDelete: Cascade)

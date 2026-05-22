@@ -252,7 +252,14 @@ export default function TripListing() {
                               className="absolute right-0 top-10 z-20 w-40 bg-white rounded-xl shadow-xl border border-[#f1f5f9] py-1 overflow-hidden"
                             >
                               <button
-                                onClick={(e) => { e.stopPropagation(); navigate(`/itinerary/build/${trip.id}`); setOpenMenu(null); }}
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  import('../store/useStore').then(({ useStore }) => {
+                                    useStore.getState().setActiveTrip(trip);
+                                    navigate('/itinerary/view');
+                                  });
+                                  setOpenMenu(null); 
+                                }}
                                 className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#0b1c30] hover:bg-[#f8fafc] transition-colors"
                               >
                                 <Eye className="w-3.5 h-3.5 text-[#64748B]" /> View

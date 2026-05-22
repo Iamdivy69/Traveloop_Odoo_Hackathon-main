@@ -5,6 +5,8 @@ import type { StopActivity } from './useTrips';
 // ─────────────────────────────────────────────
 // Queries
 // ─────────────────────────────────────────────
+const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
 export function useStopActivities(tripId: string, stopId: string) {
   return useQuery<StopActivity[]>({
     queryKey: ['stop-activities', tripId, stopId],
@@ -12,7 +14,7 @@ export function useStopActivities(tripId: string, stopId: string) {
       const { data } = await api.get(`/trips/${tripId}/stops/${stopId}/activities`);
       return data.data;
     },
-    enabled: !!tripId && !!stopId,
+    enabled: !!tripId && !!stopId && isUuid(tripId) && isUuid(stopId),
   });
 }
 

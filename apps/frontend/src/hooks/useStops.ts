@@ -5,6 +5,8 @@ import type { TripStop } from './useTrips';
 // ─────────────────────────────────────────────
 // Queries
 // ─────────────────────────────────────────────
+const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
 export function useStops(tripId: string) {
   return useQuery<TripStop[]>({
     queryKey: ['stops', tripId],
@@ -12,7 +14,7 @@ export function useStops(tripId: string) {
       const { data } = await api.get(`/trips/${tripId}/stops`);
       return data.data;
     },
-    enabled: !!tripId,
+    enabled: !!tripId && isUuid(tripId),
   });
 }
 
