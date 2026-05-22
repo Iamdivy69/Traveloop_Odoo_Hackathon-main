@@ -255,7 +255,7 @@ export default function TripListing() {
                                 onClick={(e) => { 
                                   e.stopPropagation(); 
                                   import('../store/useStore').then(({ useStore }) => {
-                                    useStore.getState().setActiveTrip(trip);
+                                    useStore.getState().setActiveTrip(trip as any);
                                     navigate('/itinerary/view');
                                   });
                                   setOpenMenu(null); 

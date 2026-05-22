@@ -33,7 +33,7 @@ export default function ItineraryView() {
     return <PageLoader />;
   }
 
-  const budget = activeTrip?.total_budget ? Number(activeTrip.total_budget) : 0;
+  const budget = (activeTrip as any)?.total_budget ? Number((activeTrip as any).total_budget) : 0;
   const spent = tripStats?.totalExpenses || 0;
   const remaining = budget - spent;
 
@@ -60,10 +60,10 @@ export default function ItineraryView() {
   })) : [];
 
   const destination = tripDetail?.stops?.[0]?.city?.name || tripDetail?.stops?.[0]?.custom_city_name || 'Multiple Destinations';
-  const startDate = formatDate(activeTrip?.start_date);
-  const endDate = formatDate(activeTrip?.end_date);
-  const coverImage = activeTrip?.cover_photo_url || '';
-  const status = 'upcoming'; // Basic fallback, we can use TripStatusBadge logic if needed
+  const startDate = formatDate((activeTrip as any)?.start_date);
+  const endDate = formatDate((activeTrip as any)?.end_date);
+  const coverImage = (activeTrip as any)?.cover_photo_url || '';
+  const status: string = 'upcoming'; // Basic fallback, we can use TripStatusBadge logic if needed
 
   return (
     <div className="page-transition">
